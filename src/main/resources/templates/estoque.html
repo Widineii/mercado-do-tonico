@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>Estoque</title><link rel="stylesheet" href="/css/app.css"></head>
+<body><header class="top"><div class="brand">Mercado do Tonico</div><nav class="nav"><a href="/">Dashboard</a><a href="/fornecedores">Fornecedores</a><a href="/xml">XML</a><a href="/logout">Sair</a></nav></header>
+<main class="wrap"><div th:if="${flash}" class="flash" th:text="${flash}"></div><h1>Estoque</h1>
+<form method="get" class="row"><label>Buscar<input name="busca" th:value="${busca}"></label><button>Pesquisar</button></form>
+<section class="card">
+  <h2>Novo/editar produto</h2>
+  <form method="post" action="/estoque/salvar" class="row">
+    <input type="hidden" name="id">
+    <label>Nome<input name="nome" required></label><label>Codigo de barras<input name="codigo_barras"></label>
+    <label>SKU<input name="sku"></label><label>Categoria<input name="categoria"></label>
+    <label>Unidade<input name="unidade" value="un"></label><label>Custo<input name="preco_custo" type="number" step="0.01"></label>
+    <label>Venda<input name="preco_venda" type="number" step="0.01"></label><label>Estoque<input name="estoque_atual" type="number" step="0.001"></label>
+    <label>Minimo<input name="estoque_minimo" type="number" step="0.001"></label><label>Prateleira<input name="localizacao"></label>
+    <label>Validade<input name="validade" type="date"></label>
+    <label>Fornecedor<select name="fornecedor_id"><option value="">Nenhum</option><option th:each="f: ${fornecedores}" th:value="${f.id}" th:text="${f.razao_social}"></option></select></label>
+    <label>Ativo<input name="ativo" type="checkbox" checked></label><button>Salvar produto</button>
+  </form>
+</section>
+<table><tr><th>Produto</th><th>Codigo</th><th>Categoria</th><th>Estoque</th><th>Min.</th><th>Custo</th><th>Venda</th><th>Ajuste</th></tr>
+  <tr th:each="p: ${produtos}">
+    <td th:text="${p.nome}"></td><td th:text="${p.codigo_barras}"></td><td th:text="${p.categoria}"></td>
+    <td th:text="${p.estoque_atual}" th:classappend="${p.estoque_atual <= p.estoque_minimo} ? 'red'"></td>
+    <td th:text="${p.estoque_minimo}"></td><td th:text="${@formatService.dinheiro(p.preco_custo)}"></td><td th:text="${@formatService.dinheiro(p.preco_venda)}"></td>
+    <td><form method="post" action="/estoque/ajustar" class="row"><input type="hidden" name="produtoId" th:value="${p.id}">
+      <select name="tipo"><option>ENTRADA</option><option>SAIDA</option><option>AJUSTE</option></select><input name="quantidade" type="number" step="0.001" required><input name="motivo" placeholder="Motivo"><button>Ajustar</button></form></td>
+  </tr>
+</table></main></body></html>

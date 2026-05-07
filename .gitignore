@@ -1,0 +1,15 @@
+# Build artifacts
+/target/
+
+# Runtime local data
+/data/
+/backups/
+/config/
+
+# IDE/editor
+/.idea/
+/.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

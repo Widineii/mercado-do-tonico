@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>Fiado</title><link rel="stylesheet" href="/css/app.css"></head>
+<body><header class="top"><div class="brand">Mercado do Tonico</div><nav class="nav"><a href="/">Dashboard</a><a href="/caixa">Caixa</a></nav></header>
+<main class="wrap"><div th:if="${flash}" class="flash" th:text="${flash}"></div><h1>Fiado</h1>
+<section class="card"><h2>Cliente</h2><form method="post" action="/clientes" class="row">
+  <label>Nome<input name="nome" required></label><label>CPF<input name="cpf"></label><label>Telefone<input name="telefone"></label>
+  <label>Endereco<input name="endereco"></label><label>Limite<input name="limite_credito" type="number" step="0.01"></label>
+  <label>Observacoes<input name="observacoes"></label><label>Bloqueado<input name="bloqueado" type="checkbox"></label><button>Salvar cliente</button>
+</form></section>
+<div class="grid">
+<section class="card"><h2>Clientes</h2><table><tr><th>Nome</th><th>CPF</th><th>Limite</th><th>Divida</th><th>Status</th></tr>
+<tr th:each="c: ${clientes}"><td th:text="${c.nome}"></td><td th:text="${c.cpf}"></td><td th:text="${@formatService.dinheiro(c.limite_credito)}"></td><td th:text="${@formatService.dinheiro(c.divida)}"></td><td th:text="${c.bloqueado == 1 ? 'Bloqueado' : 'Ativo'}"></td></tr>
+</table></section>
+<section class="card"><h2>Fiados em aberto</h2><table><tr><th>Cliente</th><th>Valor</th><th>Pago</th><th>Pagamento</th></tr>
+<tr th:each="f: ${fiados}"><td th:text="${f.cliente_nome}"></td><td th:text="${@formatService.dinheiro(f.valor)}"></td><td th:text="${@formatService.dinheiro(f.valor_pago)}"></td>
+<td><form method="post" action="/fiado/pagar" class="row"><input type="hidden" name="fiadoId" th:value="${f.id}"><input name="valor" type="number" step="0.01"><button>Pagar</button></form></td></tr>
+</table></section>
+</div></main></body></html>

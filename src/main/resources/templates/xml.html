@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>Importar XML</title><link rel="stylesheet" href="/css/app.css"></head>
+<body><header class="top"><div class="brand">Mercado do Tonico</div><nav class="nav"><a href="/">Dashboard</a><a href="/estoque">Estoque</a><a href="/fornecedores">Fornecedores</a></nav></header>
+<main class="wrap"><div th:if="${flash}" class="flash" th:text="${flash}"></div><h1>Importar XML de NF-e</h1>
+<div class="grid">
+<section class="card"><h2>Previa</h2><form method="post" action="/xml/preview" enctype="multipart/form-data"><label>Arquivo XML<input name="arquivo" type="file" accept=".xml" required></label><button>Ver previa</button></form></section>
+<section class="card"><h2>Importar</h2><form method="post" action="/xml/importar" enctype="multipart/form-data"><label>Arquivo XML<input name="arquivo" type="file" accept=".xml" required></label><button>Confirmar importacao</button></form></section>
+</div>
+<table th:if="${itens}"><tr><th>Codigo</th><th>Produto</th><th>Quantidade</th><th>Custo</th></tr>
+<tr th:each="i: ${itens}"><td th:text="${i.codigo}"></td><td th:text="${i.nome}"></td><td th:text="${i.quantidade}"></td><td th:text="${i.custo}"></td></tr>
+</table></main></body></html>

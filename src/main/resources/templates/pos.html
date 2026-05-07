@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>POS</title><link rel="stylesheet" href="/css/app.css"></head>
+<body><header class="top"><div class="brand">Mercado do Tonico</div><nav class="nav"><a href="/caixa">Caixas</a><a href="/">Dashboard</a><a th:if="${usuario != null and (#strings.equals(usuario.role, 'ADMIN') or #strings.equals(usuario.role, 'GERENTE') or #strings.equals(usuario.role, 'CAIXA'))}" href="/fiado">Fiado</a></nav></header>
+<main class="wrap">
+<div th:if="${flash}" class="flash" th:text="${flash}"></div>
+<div class="pos-grid">
+  <section>
+    <form method="post" th:action="@{'/caixa/' + ${caixa.id} + '/add'}" class="card">
+      <label>Codigo de barras, SKU ou nome<input class="barcode" name="codigo" autofocus autocomplete="off"></label>
+      <label>Quantidade<input name="quantidade" type="number" step="0.001" value="1"></label>
+      <button>Adicionar</button>
+    </form>
+    <table><tr><th>Produto</th><th>Qtd</th><th>Preco</th><th>Total</th></tr>
+      <tr th:each="i: ${cart}">
+        <td th:text="${i.nome}"></td><td th:text="${i.quantidade}"></td>
+        <td th:text="${@formatService.dinheiro(i.preco_unitario)}"></td>
+        <td th:text="${@formatService.dinheiro(i.total)}"></td>
+      </tr>
+    </table>
+  </section>
+  <aside class="card">
+    <h2 th:text="'Caixa ' + ${caixa.numero}"></h2>
+    <div class="total" th:text="${@formatService.dinheiro(cartTotal)}"></div>
+    <form method="post" th:action="@{'/caixa/' + ${caixa.id} + '/finalizar'}">
+      <div class="hint">Informe os valores por forma. A soma precisa bater com o total final.</div>
+      <div class="payment-grid">
+        <label>Dinheiro<input name="pagamento_dinheiro" type="number" step="0.01" value="0"></label>
+        <label>Debito<input name="pagamento_debito" type="number" step="0.01" value="0"></label>
+        <label>Credito<input name="pagamento_credito" type="number" step="0.01" value="0"></label>
+        <label>PIX<input name="pagamento_pix" type="number" step="0.01" value="0"></label>
+        <label>Fiado<input name="pagamento_fiado" type="number" step="0.01" value="0"></label>
+      </div>
+      <label>Cliente para fiado<select name="cliente_id"><option value="">Sem cliente</option><option th:each="c: ${clientes}" th:value="${c.id}" th:text="${c.nome}"></option></select></label>
+      <label>Desconto<input name="desconto" type="number" step="0.01" value="0"></label>
+      <label>PIN gerente<input name="pin" type="password"></label>
+      <button>Finalizar venda</button>
+    </form>
+    <form method="post" th:action="@{'/caixa/' + ${caixa.id} + '/limpar'}"><button class="muted">Limpar carrinho</button></form>
+    <hr>
+    <form method="post" th:action="@{'/caixa/' + ${caixa.id} + '/operacao'}" class="row">
+      <label>Operacao<select name="tipo"><option>SUPRIMENTO</option><option>SANGRIA</option></select></label>
+      <label>Valor<input name="valor" type="number" step="0.01"></label>
+      <label>Motivo<input name="motivo"></label>
+      <label>PIN<input name="pin" type="password"></label>
+      <button>Registrar</button>
+    </form>
+    <form method="post" th:action="@{'/caixa/' + ${caixa.id} + '/cancelar'}">
+      <label>Cancelar ultima venda - motivo<input name="motivo"></label><label>PIN<input name="pin" type="password"></label>
+      <button class="danger">Cancelar ultima venda</button>
+    </form>
+    <form method="post" th:action="@{'/caixa/' + ${caixa.id} + '/fechar'}">
+      <label>Dinheiro contado<input name="dinheiroContado" type="number" step="0.01"></label>
+      <button class="danger">Fechar caixa</button>
+    </form>
+  </aside>
+</div></main></body></html>

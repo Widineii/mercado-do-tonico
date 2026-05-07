@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatorios</title><link rel="stylesheet" href="/css/app.css"></head>
+<body><header class="top"><div class="brand">Mercado do Tonico</div><nav class="nav"><a href="/">Dashboard</a><a href="/logout">Sair</a></nav></header>
+<main class="wrap"><div th:if="${flash}" class="flash" th:text="${flash}"></div><h1>Relatorios</h1>
+<form method="get" class="row"><label>Inicio<input name="inicio" type="date" th:value="${inicio}"></label><label>Fim<input name="fim" type="date" th:value="${fim}"></label><button>Filtrar</button><a class="btn" href="/relatorios/csv?tipo=estoque">CSV Estoque</a><a class="btn" href="/relatorios/pdf?tipo=estoque">PDF Estoque</a></form>
+<div class="grid">
+<section class="card"><h2>Vendas por periodo</h2><table><tr><th>ID</th><th>Data</th><th>Caixa</th><th>Operador</th><th>Total</th><th>Pagamento</th><th>Status</th></tr>
+<tr th:each="v: ${vendas}"><td th:text="${v.id}"></td><td th:text="${@formatService.dataHora(v.timestamp)}"></td><td th:text="${v.caixa}"></td><td th:text="${v.operador}"></td><td th:text="${@formatService.dinheiro(v.total)}"></td><td th:text="${v.forma_pagamento}"></td><td th:text="${v.status}"></td></tr></table></section>
+<section class="card"><h2>Produtos mais vendidos</h2><table><tr><th>Produto</th><th>Qtd</th><th>Total</th></tr>
+<tr th:each="m: ${maisVendidos}"><td th:text="${m.nome}"></td><td th:text="${m.quantidade}"></td><td th:text="${@formatService.dinheiro(m.total)}"></td></tr></table></section>
+<section class="card"><h2>Lucro por periodo</h2><table><tr><th>Dia</th><th>Receita</th><th>Custo</th><th>Lucro</th></tr>
+<tr th:each="l: ${lucro}"><td th:text="${l.dia}"></td><td th:text="${@formatService.dinheiro(l.receita)}"></td><td th:text="${@formatService.dinheiro(l.custo)}"></td><td th:text="${@formatService.dinheiro(l.lucro)}"></td></tr></table></section>
+<section class="card"><h2>Estoque baixo</h2><table><tr><th>Produto</th><th>Atual</th><th>Minimo</th></tr><tr th:each="p: ${baixoEstoque}"><td th:text="${p.nome}"></td><td th:text="${p.estoque_atual}"></td><td th:text="${p.estoque_minimo}"></td></tr></table></section>
+</div></main></body></html>

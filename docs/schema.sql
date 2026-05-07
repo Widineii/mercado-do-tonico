@@ -1,0 +1,2 @@
+-- Espelho da migration principal. O sistema aplica este SQL automaticamente ao iniciar.
+-- Arquivo fonte: src/main/resources/db/migration/001_initial_schema.sql

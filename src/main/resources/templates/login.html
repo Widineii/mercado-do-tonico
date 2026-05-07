@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mercado do Tonico - Login</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="wrap" style="max-width:420px">
+  <div class="card">
+    <h1>Mercado do Tonico</h1>
+    <p th:if="${erro}" class="flash" th:text="${erro}"></p>
+    <form method="post" action="/login">
+      <label>Login<input name="login" autofocus required></label>
+      <label>Senha<input name="senha" type="password" required></label>
+      <button type="submit">Entrar</button>
+    </form>
+    <p>Admin: <b>admin</b> / <b>admin123</b> / PIN <b>1234</b></p>
+    <p>Caixa: <b>caixa1</b> ou <b>caixa2</b> / <b>caixa123</b></p>
+  </div>
+</div>
+</body>
+</html>
