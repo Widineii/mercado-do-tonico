@@ -10,8 +10,8 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [2/4] Gerando build final...
-call .\mvnw.cmd -q -DskipTests package
+echo [2/4] Gerando build final (desktop)...
+call .\mvnw.cmd -q -DskipTests clean package
 if errorlevel 1 (
   echo Falha no build.
   pause

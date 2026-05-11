@@ -22,7 +22,7 @@ public final class PaymentAllocationService {
         Map<String, BigDecimal> normalized = new LinkedHashMap<>();
         for (String method : SUPPORTED_METHODS) {
             BigDecimal value = valores.getOrDefault(method, BigDecimal.ZERO);
-            BusinessRules.requireNonNegative(value, "Valor de " + method);
+            BusinessRules.requireNonNegative(value, "Valor de " + paymentDisplayName(method));
             BigDecimal scaled = value.setScale(2, RoundingMode.HALF_UP);
             if (scaled.compareTo(BigDecimal.ZERO) > 0) {
                 normalized.put(method, scaled);
@@ -43,6 +43,16 @@ public final class PaymentAllocationService {
     }
 
     public static String paymentLabel(Map<String, BigDecimal> allocations) {
-        return allocations.keySet().stream().collect(Collectors.joining("+"));
+        return allocations.keySet().stream()
+                .map(PaymentAllocationService::paymentDisplayName)
+                .collect(Collectors.joining("+"));
+    }
+
+    /** Nome exibido para o operador (codigo interno de venda continua {@code FIADO}). */
+    public static String paymentDisplayName(String method) {
+        if ("FIADO".equals(method)) {
+            return "Convênio";
+        }
+        return method;
     }
 }
