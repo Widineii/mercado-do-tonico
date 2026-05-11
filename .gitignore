@@ -1,8 +1,9 @@
 # Build artifacts
 /target/
 
-# Runtime local data
-/data/
+# Runtime local data (rastrear só o SQLite principal; resto fica local)
+/data/*
+!/data/mercado-tonico.db
 /backups/
 /config/
 
