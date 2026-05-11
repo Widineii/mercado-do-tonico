@@ -1,0 +1,21 @@
+============================================
+             MERCADO DO TONICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #2  09/05/2026 14:32
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Cafe Tradicional 500g             1   R$ 15,99     R$ 15,99
+--------------------------------------------
+Subtotal produtos                        R$ 15,99
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                            R$ 15,99
+--------------------------------------------
+Pagamentos:
+  DINHEIRO      R$ 15,99
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

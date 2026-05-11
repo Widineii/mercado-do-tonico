@@ -1,0 +1,21 @@
+============================================
+             MERCADO DO TONICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #5  11/05/2026 08:18
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Achocolatado Nescau Lata 20.      2    R$ 8,99     R$ 17,98
+--------------------------------------------
+Subtotal produtos                        R$ 17,98
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                            R$ 17,98
+--------------------------------------------
+Pagamentos:
+  DINHEIRO      R$ 17,98
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

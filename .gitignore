@@ -1,11 +1,8 @@
 # Build artifacts
 /target/
 
-# Runtime local data (rastrear só o SQLite principal; resto fica local)
-/data/*
-!/data/mercado-tonico.db
-/backups/
-/config/
+# Logs do app em execução (regeneráveis; podem ficar grandes)
+/data/logs/
 
 # IDE/editor
 /.idea/

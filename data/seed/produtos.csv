@@ -1,0 +1,37 @@
+nome,marca,codigoBarras,categoria,subcategoria,unidade,quantidadeEmbalagem,precoCusto,precoVenda,estoqueAtual,estoqueMinimo,ncm,codigoVerificado
+Arroz Branco Tipo 1 Camil 1kg,Camil,7896006711117,Arroz feijão e grãos,Arroz,UN,1kg,4.80,6.99,30,10,10063021,true
+Arroz Parboilizado Tipo 1 Camil 5kg,Camil,7896006716150,Arroz feijão e grãos,Arroz,UN,5kg,22.50,31.90,20,6,10063019,true
+Arroz Tipo 1 Fantástico 5kg,Fantástico,7896584300017,Arroz feijão e grãos,Arroz,UN,5kg,22.90,31.08,18,6,10063011,true
+Feijão Carioca Tipo 1 Camil 1kg,Camil,7896006744115,Arroz feijão e grãos,Feijão,UN,1kg,5.30,7.49,30,10,07133399,true
+Feijão Preto Tipo 1 Camil 1kg,Camil,7896006751113,Arroz feijão e grãos,Feijão,UN,1kg,5.80,8.49,25,8,07133319,true
+Feijão Preto Camil 500g,Camil,7896006751106,Arroz feijão e grãos,Feijão,UN,500g,3.40,4.99,20,8,07133319,true
+Feijão Carioca Kicaldo Tipo 1 1kg,Kicaldo,7896116900029,Arroz feijão e grãos,Feijão,UN,1kg,5.20,7.49,30,10,07133399,true
+Feijão Preto Kicaldo 1kg,Kicaldo,7896116900425,Arroz feijão e grãos,Feijão,UN,1kg,5.90,8.99,25,8,07133319,true
+Feijão Grão de Campo Carioca 1kg,Grão de Campo,7896200115902,Arroz feijão e grãos,Feijão,UN,1kg,4.90,6.99,25,8,07133399,true
+Feijão Carioca Namorado Tipo 1 1kg,Namorado,7896079451118,Arroz feijão e grãos,Feijão,UN,1kg,6.20,8.99,25,8,07133329,true
+Óleo de Soja Soya PET 900ml,Soya,7891080801204,Óleos e azeites,Óleo de soja,UN,900ml,5.40,7.99,36,12,15079011,true
+Óleo de Soja Soya Garrafa 900ml,Soya,7891107101621,Óleos e azeites,Óleo de soja,UN,900ml,5.40,7.99,36,12,15079011,true
+Óleo de Soja Liza PET 900ml,Liza,7896036090244,Óleos e azeites,Óleo de soja,UN,900ml,5.80,8.49,30,10,15079011,true
+Açúcar União Demerara 1kg,União,7891910030101,Açúcar sal e temperos,Açúcar,UN,1kg,4.80,6.99,25,8,17019900,true
+Sal Refinado Cisne Extra 1kg,Cisne,7896035210001,Açúcar sal e temperos,Sal,UN,1kg,2.40,3.99,30,10,25010020,true
+Sal Grosso Cisne 1kg,Cisne,7896035210018,Açúcar sal e temperos,Sal grosso,UN,1kg,3.20,5.49,20,8,25010020,true
+Sal Refinado Lebre Marinho 1kg,Lebre,7896110100043,Açúcar sal e temperos,Sal,UN,1kg,2.20,3.79,30,10,25010020,true
+Sal Grosso Lebre 1kg,Lebre,7896110100814,Açúcar sal e temperos,Sal grosso,UN,1kg,3.00,4.99,20,8,25010020,true
+Café Pilão Tradicional Vácuo 500g,Pilão,7896089011357,Café leite e achocolatados,Café,UN,500g,22.50,32.90,20,6,09012100,true
+Café 3 Corações Tradicional Vácuo 500g,3 Corações,7896045102440,Café leite e achocolatados,Café,UN,500g,21.90,31.99,20,6,09012100,true
+Café 3 Corações Extraforte Vácuo 500g,3 Corações,7896045102396,Café leite e achocolatados,Café,UN,500g,21.90,31.99,20,6,09012100,true
+Café Melitta Tradicional Vácuo 500g,Melitta,7891021006125,Café leite e achocolatados,Café,UN,500g,22.90,33.99,20,6,09012100,true
+Café Melitta Tradicional Vácuo 250g,Melitta,7891021006071,Café leite e achocolatados,Café,UN,250g,11.80,17.99,20,6,09012100,true
+Café Melitta Extraforte Vácuo 500g,Melitta,7891021006934,Café leite e achocolatados,Café,UN,500g,22.90,33.99,20,6,09012100,true
+Café Melitta Extraforte Vácuo 250g,Melitta,7891021006927,Café leite e achocolatados,Café,UN,250g,11.80,17.99,20,6,09012100,true
+Achocolatado Nescau Lata 370g,Nescau,7891000352175,Café leite e achocolatados,Achocolatado,UN,370g,8.40,12.99,20,6,18069000,true
+Achocolatado Nescau Lata 400g,Nescau,7891000053508,Café leite e achocolatados,Achocolatado,UN,400g,9.20,13.99,20,6,18069000,true
+Achocolatado Nescau Lata 200g,Nescau,7891000061190,Café leite e achocolatados,Achocolatado,UN,200g,5.80,8.99,20,6,18069000,true
+Achocolatado Toddy Original Pote 370g,Toddy,7892840819507,Café leite e achocolatados,Achocolatado,UN,370g,8.20,12.49,20,6,18069000,true
+Leite Condensado Moça Lata 395g,Moça,7891000100103,Frios e laticínios industrializados,Leite condensado,UN,395g,5.90,8.99,24,8,04029900,true
+Detergente Líquido Ypê Clear 500ml,Ypê,7896098900253,Limpeza,Detergente,UN,500ml,1.80,2.99,36,12,34023100,true
+Detergente Líquido Ypê Capim Limão 500ml,Ypê,7896098902042,Limpeza,Detergente,UN,500ml,1.80,2.99,36,12,34023100,true
+Sabonete Dove Branco 90g,Dove,7898422746759,Higiene pessoal,Sabonete,UN,90g,3.50,5.99,24,8,34011190,true
+Sabonete Dove Branco Pack 12un 90g,Dove,7891150052468,Higiene pessoal,Sabonete,UN,12x90g,39.90,59.90,8,3,34011190,true
+Filtro de Papel Melitta 103 30un,Melitta,7891021001946,Utilidades domésticas simples,Filtro de café,UN,30un,4.20,6.99,20,6,48232099,true
+Filtro de Papel Melitta Nº4 30un,Melitta,7891021002202,Utilidades domésticas simples,Filtro de café,UN,30un,4.50,7.49,20,6,48232099,true

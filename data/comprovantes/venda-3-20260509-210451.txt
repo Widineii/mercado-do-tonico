@@ -1,0 +1,21 @@
+============================================
+             MERCADO DO TONICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #3  09/05/2026 21:04
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Café 3 Corações Extraforte .      1   R$ 31,99     R$ 31,99
+--------------------------------------------
+Subtotal produtos                        R$ 31,99
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                            R$ 31,99
+--------------------------------------------
+Pagamentos:
+  PIX           R$ 31,99
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================
