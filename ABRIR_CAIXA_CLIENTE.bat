@@ -6,11 +6,11 @@ if not exist "config" mkdir config
 
 if not exist "config\desktop.properties" (
   (
-    echo # Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\mercado-tunico.db
+    echo # Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\data\mercado-tonico.db
     echo mercado.db.url=
   ) > "config\desktop.properties"
   echo Configure o arquivo config\desktop.properties com o caminho de rede do banco.
-  echo Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\mercado-tunico.db
+  echo Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\data\mercado-tonico.db
   pause
   exit /b 1
 )

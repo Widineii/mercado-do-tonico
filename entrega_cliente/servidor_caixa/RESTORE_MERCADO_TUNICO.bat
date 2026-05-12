@@ -24,7 +24,7 @@ exit /b 1
 
 :found
 echo Backup mais recente: %latest%
-set /p confirm="Confirmar restore para data\mercado-tunico.db? (S/N): "
+set /p confirm="Confirmar restore para data\mercado-tonico.db? (S/N): "
 if /I not "%confirm%"=="S" (
   echo Operacao cancelada.
   pause
@@ -32,7 +32,7 @@ if /I not "%confirm%"=="S" (
 )
 
 if not exist "data" mkdir data
-copy /y "backups\%latest%" "data\mercado-tunico.db" >nul
+copy /y "backups\%latest%" "data\mercado-tonico.db" >nul
 if errorlevel 1 (
   echo Falha no restore.
   pause
