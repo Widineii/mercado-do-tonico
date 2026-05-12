@@ -26,7 +26,7 @@
 
 ## Como testar
 
-1. Abrir o desktop pelo atalho `ABRIR_MERCADO_TONICO_DESKTOP.bat`.
+1. Abrir o desktop pelo atalho `ABRIR_MERCADO_TUNICO_DESKTOP.bat`.
 2. Entrar com um usuario de caixa.
 3. Abrir um caixa com fundo inicial.
 4. Adicionar produtos ao carrinho.

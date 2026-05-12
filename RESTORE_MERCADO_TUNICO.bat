@@ -9,18 +9,22 @@ if not exist "backups" (
 )
 
 set "latest="
+for /f "delims=" %%F in ('dir /b /a-d /o-d "backups\mercado-tunico_*.db" 2^>nul') do (
+  set "latest=%%F"
+  goto :found
+)
 for /f "delims=" %%F in ('dir /b /a-d /o-d "backups\mercado-tonico_*.db" 2^>nul') do (
   set "latest=%%F"
   goto :found
 )
 
-echo Nenhum backup encontrado em backups\mercado-tonico_*.db
+echo Nenhum backup encontrado em backups\mercado-tunico_*.db nem mercado-tonico_*.db
 pause
 exit /b 1
 
 :found
 echo Backup mais recente: %latest%
-set /p confirm="Confirmar restore para data\mercado-tonico.db? (S/N): "
+set /p confirm="Confirmar restore para data\mercado-tunico.db? (S/N): "
 if /I not "%confirm%"=="S" (
   echo Operacao cancelada.
   pause
@@ -28,7 +32,7 @@ if /I not "%confirm%"=="S" (
 )
 
 if not exist "data" mkdir data
-copy /y "backups\%latest%" "data\mercado-tonico.db" >nul
+copy /y "backups\%latest%" "data\mercado-tunico.db" >nul
 if errorlevel 1 (
   echo Falha no restore.
   pause

@@ -1,0 +1,21 @@
+============================================
+             MERCADO DO TUNICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #14  12/05/2026 14:29
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Café 3 Corações Tradicional.      1   R$ 31,99     R$ 31,99
+--------------------------------------------
+Subtotal produtos                        R$ 31,99
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                            R$ 31,99
+--------------------------------------------
+Pagamentos:
+  DINHEIRO      R$ 31,99
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

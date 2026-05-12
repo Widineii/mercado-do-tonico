@@ -12,16 +12,24 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.LongFunction;
 
 /**
@@ -34,8 +42,10 @@ import java.util.function.LongFunction;
  *       sistema chama {@link BarcodeLookupService#lookup(String)} em
  *       thread de background ({@link SwingWorker}) para nao travar a EDT.</li>
  *   <li>Se ja existir em {@code produtos}, o form trava em modo somente
- *       leitura com aviso "Produto ja cadastrado" e botao "Editar" libera os
- *       campos (UPDATE no salvar).</li>
+ *       leitura com aviso "Produto ja cadastrado". Salvar preenche apenas
+ *       campos que estavam vazios no banco (sem duplicar item). O botao
+ *       "Editar" libera os campos para gravar tudo como informado (UPDATE
+ *       completo).</li>
  *   <li>Se vier de uma API/cache, o form fica preenchido e habilitado para
  *       o operador completar custo / preco / estoque / validade.</li>
  *   <li>Se nao for encontrado em lugar nenhum, o form fica vazio e
@@ -53,6 +63,12 @@ public final class BarcodeLookupDialog extends JDialog {
 
     private static final int SEARCH_DEBOUNCE_MS = 350;
     private static final long PRICE_MARKUP_PERCENT = 30L; // sugestao venda = custo + 30%
+
+    /** HTTP para imagens: CDNs costumam bloquear sem User-Agent ({@code ImageIO.read(URL)} falhava). */
+    private static final java.net.http.HttpClient IMAGE_HTTP_CLIENT = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(8))
+            .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+            .build();
 
     // Paleta sincronizada com DesktopApp para nao desalinhar o tema verde.
     private static final Color GREEN       = new Color(0x1B, 0x5E, 0x20);
@@ -108,6 +124,10 @@ public final class BarcodeLookupDialog extends JDialog {
     private SwingWorker<BufferedImage, Void> currentImageWorker;
     private Long existingProductId; // !=null quando o EAN ja existe em produtos
     private String pendingImageUrl;
+    /** Apos "Editar", o salvar substitui os campos; sem isso, apenas preenche lacunas no banco. */
+    private boolean forceFullUpdateOnSave;
+    /** Evita debounce de busca ao alterar o campo de barras por codigo (fillForm / limpar). */
+    private boolean suppressBarcodeSearch;
 
     public BarcodeLookupDialog(Window owner,
                                Connection con,
@@ -445,9 +465,9 @@ public final class BarcodeLookupDialog extends JDialog {
         });
         // Debounce: digitar dispara timer; Enter dispara busca imediata.
         fldBarcode.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e)  { searchDebounce.restart(); }
-            @Override public void removeUpdate(DocumentEvent e)  { searchDebounce.restart(); }
-            @Override public void changedUpdate(DocumentEvent e) { searchDebounce.restart(); }
+            @Override public void insertUpdate(DocumentEvent e)  { onBarcodeDocumentChanged(); }
+            @Override public void removeUpdate(DocumentEvent e)  { onBarcodeDocumentChanged(); }
+            @Override public void changedUpdate(DocumentEvent e) { onBarcodeDocumentChanged(); }
         });
         fldBarcode.addActionListener(e -> {
             searchDebounce.stop();
@@ -455,7 +475,10 @@ public final class BarcodeLookupDialog extends JDialog {
         });
         btnSearch.addActionListener(e -> performSearch());
         btnSave.addActionListener(e -> saveProduct());
-        btnEdit.addActionListener(e -> setFormReadOnly(false));
+        btnEdit.addActionListener(e -> {
+            forceFullUpdateOnSave = true;
+            setFormReadOnly(false);
+        });
         btnClear.addActionListener(e -> { clearForm(true); fldBarcode.requestFocusInWindow(); });
         btnClose.addActionListener(e -> dispose());
 
@@ -471,6 +494,59 @@ public final class BarcodeLookupDialog extends JDialog {
     // -----------------------------------------------------------------
     // Search workflow
     // -----------------------------------------------------------------
+
+    private void onBarcodeDocumentChanged() {
+        if (suppressBarcodeSearch) {
+            return;
+        }
+        searchDebounce.restart();
+    }
+
+    /** Atualiza o EAN sem disparar nova busca automatica (debounce). */
+    private void setFldBarcodeSilently(String text) {
+        suppressBarcodeSearch = true;
+        try {
+            fldBarcode.setText(text == null ? "" : text);
+        } finally {
+            SwingUtilities.invokeLater(() -> suppressBarcodeSearch = false);
+        }
+    }
+
+    private static String sanitizeBarcodeText(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.trim().replaceAll("[^0-9A-Za-z]", "");
+    }
+
+    /**
+     * Cache/API as vezes devolvem GTIN truncado. Nunca encurtar o que o operador ja leu no campo
+     * (evita nova busca em loop e piscar da tela / da imagem).
+     */
+    private void syncBarcodeFieldFromResult(BarcodeLookupResult r) {
+        String rb = r.barcode();
+        if (rb == null || rb.isBlank()) {
+            return;
+        }
+        String sanitizedR = sanitizeBarcodeText(rb);
+        if (sanitizedR.isEmpty()) {
+            return;
+        }
+        String cur = sanitizeBarcodeText(fldBarcode.getText());
+        if (cur.equals(sanitizedR)) {
+            return;
+        }
+        if (!cur.isEmpty()) {
+            if (cur.length() >= sanitizedR.length() && cur.endsWith(sanitizedR)) {
+                return;
+            }
+            if (sanitizedR.length() > cur.length() && sanitizedR.endsWith(cur)) {
+                setFldBarcodeSilently(sanitizedR);
+                return;
+            }
+        }
+        setFldBarcodeSilently(sanitizedR);
+    }
 
     private void performSearch() {
         String barcode = fldBarcode.getText().trim().replaceAll("[^0-9A-Za-z]", "");
@@ -515,15 +591,17 @@ public final class BarcodeLookupDialog extends JDialog {
     private void applyOutcome(String barcode, BarcodeLookupService.Outcome outcome) {
         if (outcome.isAlreadyRegistered()) {
             // Caminho 1: produto ja existe -> carrega readonly e oferece "Editar".
+            forceFullUpdateOnSave = false;
             existingProductId = outcome.existingProductId.orElse(null);
             BarcodeLookupResult r = outcome.result.orElse(null);
             if (r != null) fillForm(r);
             setFormReadOnly(true);
             btnSave.setText("\uD83D\uDD04  Atualizar Produto");
-            setStatus("Produto ja cadastrado. Clique em Editar para alterar.", ORANGE);
+            setStatus("Produto ja cadastrado. Salvar preenche apenas campos vazios; use Editar para gravar tudo.", ORANGE);
             showBadge("DB", GREEN_SOFT, GREEN);
         } else if (outcome.hasResult()) {
             // Caminho 2: dados vieram de cache ou API.
+            forceFullUpdateOnSave = false;
             existingProductId = null;
             BarcodeLookupResult r = outcome.result.get();
             fillForm(r);
@@ -540,9 +618,10 @@ public final class BarcodeLookupDialog extends JDialog {
             showBadge(label, GREEN_SOFT, GREEN);
         } else {
             // Caminho 3: nao encontrado - cadastro manual com EAN preenchido.
+            forceFullUpdateOnSave = false;
             existingProductId = null;
             clearForm(false);
-            fldBarcode.setText(barcode);
+            setFldBarcodeSilently(barcode);
             setFormReadOnly(false);
             btnSave.setText("\uD83D\uDCBE  Salvar Produto");
             setStatus("Produto nao encontrado nas bases - preencha manualmente.",
@@ -563,8 +642,14 @@ public final class BarcodeLookupDialog extends JDialog {
     // -----------------------------------------------------------------
 
     private void clearForm(boolean clearBarcode) {
+        if (currentImageWorker != null) {
+            currentImageWorker.cancel(true);
+        }
         existingProductId = null;
-        if (clearBarcode) fldBarcode.setText("");
+        forceFullUpdateOnSave = false;
+        if (clearBarcode) {
+            setFldBarcodeSilently("");
+        }
         fldName.setText("");
         fldBrand.setText("");
         fldManufacturer.setText("");
@@ -579,6 +664,7 @@ public final class BarcodeLookupDialog extends JDialog {
         fldPrateleira.setText("");
         fldValidade.setText(LocalDate.now().plusMonths(6).toString());
         fldObservacao.setText("");
+        pendingImageUrl = null;
         lblImage.setIcon(null);
         lblImage.setText("\uD83D\uDCE6");
         setFormReadOnly(false);
@@ -587,7 +673,7 @@ public final class BarcodeLookupDialog extends JDialog {
     }
 
     private void fillForm(BarcodeLookupResult r) {
-        if (r.barcode() != null) fldBarcode.setText(r.barcode());
+        syncBarcodeFieldFromResult(r);
         fldName.setText(safe(r.name()));
         fldBrand.setText(safe(r.brand()));
         fldManufacturer.setText(safe(r.manufacturer()));
@@ -657,29 +743,58 @@ public final class BarcodeLookupDialog extends JDialog {
     // -----------------------------------------------------------------
 
     private void loadImageAsync(String url) {
-        if (currentImageWorker != null) currentImageWorker.cancel(true);
         if (url == null || url.isBlank()) {
+            if (currentImageWorker != null) {
+                currentImageWorker.cancel(true);
+            }
+            pendingImageUrl = null;
             lblImage.setIcon(null);
             lblImage.setText("\uD83D\uDCE6");
             return;
         }
-        if (url.equalsIgnoreCase(pendingImageUrl)) return;
-        pendingImageUrl = url;
+        final String urlToLoad = url.trim();
+        if (Objects.equals(urlToLoad, pendingImageUrl)
+                && currentImageWorker != null
+                && !currentImageWorker.isDone()) {
+            return;
+        }
+        if (currentImageWorker != null) {
+            currentImageWorker.cancel(true);
+        }
+        pendingImageUrl = urlToLoad;
         lblImage.setIcon(null);
         lblImage.setText("\u23F3");
 
         currentImageWorker = new SwingWorker<>() {
             @Override
             protected BufferedImage doInBackground() throws Exception {
-                try {
-                    return ImageIO.read(URI.create(url).toURL());
-                } catch (Exception e) {
+                HttpRequest req = HttpRequest.newBuilder(URI.create(urlToLoad))
+                        .timeout(Duration.ofSeconds(25))
+                        .header("User-Agent", "MercadoDoTunicoPDV/1.0 (desktop; cadastro-barcode)")
+                        .header("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+                        .GET()
+                        .build();
+                HttpResponse<byte[]> resp = IMAGE_HTTP_CLIENT.send(req, HttpResponse.BodyHandlers.ofByteArray());
+                if (resp.statusCode() < 200 || resp.statusCode() >= 400) {
                     return null;
                 }
+                byte[] body = resp.body();
+                if (body == null || body.length == 0) {
+                    return null;
+                }
+                try (ByteArrayInputStream in = new ByteArrayInputStream(body)) {
+                    return ImageIO.read(in);
+                }
             }
+
             @Override
             protected void done() {
-                if (isCancelled()) return;
+                if (isCancelled()) {
+                    return;
+                }
+                if (!Objects.equals(urlToLoad, pendingImageUrl)) {
+                    return;
+                }
                 try {
                     BufferedImage img = get();
                     if (img == null) {
@@ -689,8 +804,12 @@ public final class BarcodeLookupDialog extends JDialog {
                     }
                     int targetW = lblImage.getWidth() - 10;
                     int targetH = lblImage.getHeight() - 10;
-                    if (targetW <= 0) targetW = 200;
-                    if (targetH <= 0) targetH = 200;
+                    if (targetW <= 0) {
+                        targetW = 200;
+                    }
+                    if (targetH <= 0) {
+                        targetH = 200;
+                    }
                     double scale = Math.min(
                             (double) targetW / img.getWidth(),
                             (double) targetH / img.getHeight());
@@ -733,12 +852,27 @@ public final class BarcodeLookupDialog extends JDialog {
             String validade = fldValidade.getText().trim();
             String observacoes = fldObservacao.getText().trim();
 
-            if (existingProductId != null) {
-                updateExisting(existingProductId, nome, barcode, marca, fabricante, categoria,
-                        unidade, ncm, cest, custo, venda, prateleira, validade, observacoes);
-                JOptionPane.showMessageDialog(this,
-                        "Produto #" + existingProductId + " atualizado com sucesso!",
-                        "Atualizado", JOptionPane.INFORMATION_MESSAGE);
+            Long targetId = existingProductId != null
+                    ? existingProductId
+                    : lookupService.findRegisteredProductId(barcode).orElse(null);
+
+            if (targetId != null) {
+                if (forceFullUpdateOnSave) {
+                    updateExisting(targetId, nome, barcode, marca, fabricante, categoria,
+                            unidade, ncm, cest, custo, venda, prateleira, validade, observacoes);
+                    applyExtendedFields(targetId, marca, fabricante, ncm, cest, pendingImageUrl);
+                    JOptionPane.showMessageDialog(this,
+                            "Produto #" + targetId + " atualizado com sucesso!",
+                            "Atualizado", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    mergeUpdateExisting(targetId, nome, barcode, marca, fabricante, categoria,
+                            unidade, ncm, cest, custo, venda, estoqueMin, prateleira, validade, observacoes,
+                            pendingImageUrl);
+                    JOptionPane.showMessageDialog(this,
+                            "Produto #" + targetId + " atualizado sem duplicar: "
+                                    + "so foram gravados dados que ainda estavam vazios no item.",
+                            "Atualizado", JOptionPane.INFORMATION_MESSAGE);
+                }
             } else {
                 long produtoId = inventoryService.saveProduct(
                         new DesktopInventoryService.ProductDraft(
@@ -765,6 +899,7 @@ public final class BarcodeLookupDialog extends JDialog {
                         "Salvo", JOptionPane.INFORMATION_MESSAGE);
             }
             onProductSaved.run();
+            forceFullUpdateOnSave = false;
             dispose();
         } catch (Exception ex) {
             SupportLogger.log("ERROR", "barcode-ui", "Erro ao salvar produto", ex.getMessage());
@@ -800,6 +935,142 @@ public final class BarcodeLookupDialog extends JDialog {
                 ps.executeUpdate();
             }
         }
+    }
+
+    /**
+     * Atualiza produto existente preenchendo apenas lacunas (nao duplica linha, nao zera estoque).
+     * Precos e estoque minimo so mudam se no banco estiverem zerados ou nulos.
+     */
+    private void mergeUpdateExisting(long id, String nomeForm, String barcodeForm, String marcaForm,
+                                     String fabricanteForm, String categoriaForm, String unidadeForm,
+                                     String ncmForm, String cestForm, BigDecimal custoForm, BigDecimal vendaForm,
+                                     BigDecimal estoqueMinForm, String prateleiraForm, String validadeForm,
+                                     String observacoesForm, String imageUrlForm) throws Exception {
+        Map<String, Object> cur = loadProdutoRow(id);
+        String nome = mergeTextPreferDb(str(cur, "nome"), nomeForm);
+        if (nome == null || nome.isBlank()) {
+            nome = nomeForm.trim();
+        }
+        String cbDb = str(cur, "codigo_barras");
+        String codigoBarras = (cbDb == null || cbDb.isBlank()) && barcodeForm != null && !barcodeForm.isBlank()
+                ? barcodeForm
+                : (cbDb != null && !cbDb.isBlank() ? cbDb : barcodeForm);
+        String marca = mergeTextPreferDb(str(cur, "marca"), marcaForm);
+        String fabricante = mergeTextPreferDb(str(cur, "fabricante"), fabricanteForm);
+        String categoria = mergeTextPreferDb(str(cur, "categoria"), categoriaForm);
+        if (categoria == null || categoria.isBlank()) {
+            categoria = emptyToDefault(categoriaForm, "Mercearia");
+        }
+        String unidade = mergeTextPreferDb(str(cur, "unidade"), unidadeForm);
+        if (unidade == null || unidade.isBlank()) {
+            unidade = emptyToDefault(unidadeForm, "un");
+        }
+        String ncm = mergeTextPreferDb(str(cur, "ncm"), ncmForm);
+        String cest = mergeTextPreferDb(str(cur, "cest"), cestForm);
+        BigDecimal custo = mergeMoneyPreserveNonZero(moneyField(cur.get("preco_custo")), custoForm);
+        BigDecimal venda = mergeMoneyPreserveNonZero(moneyField(cur.get("preco_venda")), vendaForm);
+        BigDecimal estMin = mergeMoneyPreserveNonZero(moneyField(cur.get("estoque_minimo")), estoqueMinForm);
+        String prateleira = mergeTextPreferDb(str(cur, "localizacao"), prateleiraForm);
+        String validade = mergeTextPreferDb(str(cur, "validade"), validadeForm);
+        String observacoes = mergeTextPreferDb(str(cur, "observacoes"), observacoesForm);
+        String imagem = mergeTextPreferDb(str(cur, "imagem_url"), imageUrlForm);
+
+        synchronized (con) {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "update produtos set nome=?, codigo_barras=?, marca=?, fabricante=?, categoria=?, " +
+                    "unidade=?, ncm=?, cest=?, preco_custo=?, preco_venda=?, estoque_minimo=?, " +
+                    "localizacao=?, validade=?, observacoes=?, imagem_url=?, " +
+                    "cadastrado_em=coalesce(cadastrado_em, datetime('now')) where id=?")) {
+                ps.setString(1, nome);
+                ps.setString(2, codigoBarras);
+                ps.setString(3, marca);
+                ps.setString(4, fabricante);
+                ps.setString(5, categoria);
+                ps.setString(6, unidade);
+                ps.setString(7, ncm);
+                ps.setString(8, cest);
+                ps.setBigDecimal(9, custo);
+                ps.setBigDecimal(10, venda);
+                ps.setBigDecimal(11, estMin);
+                ps.setString(12, prateleira);
+                ps.setString(13, validade);
+                ps.setString(14, observacoes);
+                ps.setString(15, imagem);
+                ps.setLong(16, id);
+                ps.executeUpdate();
+            }
+        }
+    }
+
+    private Map<String, Object> loadProdutoRow(long produtoId) throws Exception {
+        synchronized (con) {
+            try (PreparedStatement ps = con.prepareStatement(
+                    "select nome, codigo_barras, marca, fabricante, categoria, unidade, ncm, cest, " +
+                    "preco_custo, preco_venda, estoque_minimo, localizacao, validade, observacoes, imagem_url " +
+                    "from produtos where id=?")) {
+                ps.setLong(1, produtoId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        throw new IllegalStateException("Produto nao encontrado: " + produtoId);
+                    }
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("nome", rs.getString("nome"));
+                    m.put("codigo_barras", rs.getString("codigo_barras"));
+                    m.put("marca", rs.getString("marca"));
+                    m.put("fabricante", rs.getString("fabricante"));
+                    m.put("categoria", rs.getString("categoria"));
+                    m.put("unidade", rs.getString("unidade"));
+                    m.put("ncm", rs.getString("ncm"));
+                    m.put("cest", rs.getString("cest"));
+                    m.put("preco_custo", rs.getBigDecimal("preco_custo"));
+                    m.put("preco_venda", rs.getBigDecimal("preco_venda"));
+                    m.put("estoque_minimo", rs.getBigDecimal("estoque_minimo"));
+                    m.put("localizacao", rs.getString("localizacao"));
+                    m.put("validade", rs.getString("validade"));
+                    m.put("observacoes", rs.getString("observacoes"));
+                    m.put("imagem_url", rs.getString("imagem_url"));
+                    return m;
+                }
+            }
+        }
+    }
+
+    private static String str(Map<String, Object> row, String key) {
+        Object v = row.get(key);
+        return v == null ? null : v.toString();
+    }
+
+    /** Mantem texto ja cadastrado; usa o form so quando o banco esta vazio. */
+    private static String mergeTextPreferDb(String db, String form) {
+        if (db != null && !db.isBlank()) {
+            return db.trim();
+        }
+        if (form == null || form.isBlank()) {
+            return null;
+        }
+        return form.trim();
+    }
+
+    private static BigDecimal moneyField(Object o) {
+        if (o == null) {
+            return BigDecimal.ZERO;
+        }
+        if (o instanceof BigDecimal b) {
+            return b;
+        }
+        try {
+            return new BigDecimal(o.toString());
+        } catch (Exception e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /** Preco no banco diferente de zero e preservado; caso contrario usa o valor do form. */
+    private static BigDecimal mergeMoneyPreserveNonZero(BigDecimal db, BigDecimal form) {
+        if (db != null && db.compareTo(BigDecimal.ZERO) != 0) {
+            return db;
+        }
+        return form == null ? BigDecimal.ZERO : form;
     }
 
     private void applyExtendedFields(long produtoId, String marca, String fabricante,

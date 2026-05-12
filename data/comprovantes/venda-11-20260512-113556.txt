@@ -1,0 +1,22 @@
+============================================
+             MERCADO DO TUNICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #11  12/05/2026 11:35
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Achocolatado Nescau Lata 20.      1    R$ 8,99      R$ 8,99
+Café 3 Corações Extraforte .      1   R$ 31,99     R$ 31,99
+--------------------------------------------
+Subtotal produtos                        R$ 40,98
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                            R$ 40,98
+--------------------------------------------
+Pagamentos:
+  DINHEIRO      R$ 40,98
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

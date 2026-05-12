@@ -10,7 +10,7 @@
 
 ## 2) Validacao operacional (10 a 20 min)
 
-1. Abra `ABRIR_MERCADO_TONICO_DESKTOP.bat`.
+1. Abra `ABRIR_MERCADO_TUNICO_DESKTOP.bat`.
 2. Entre com `admin` e troque a senha temporaria.
 3. Repita para `gerente`, `caixa1` e `estoque1`.
 4. No perfil `caixa1`:
@@ -21,8 +21,8 @@
 5. No perfil `estoque1`:
    - importar XML de NF-e;
    - validar aumento de estoque.
-6. Execute `BACKUP_MERCADO_TONICO.bat`.
-7. Execute `RESTORE_MERCADO_TONICO.bat`.
+6. Execute `BACKUP_MERCADO_TUNICO.bat`.
+7. Execute `RESTORE_MERCADO_TUNICO.bat`.
 8. Reabra o sistema e confirme login + produtos.
 
 ## 3) Critério de pronto

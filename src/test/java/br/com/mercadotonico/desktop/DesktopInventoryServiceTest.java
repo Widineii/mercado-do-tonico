@@ -114,4 +114,53 @@ class DesktopInventoryServiceTest {
             }
         }
     }
+
+    @Test
+    void shouldRegisterStockLossWithFinancialExpense() throws Exception {
+        try (Connection con = DriverManager.getConnection("jdbc:sqlite::memory:")) {
+            new MigrationRunner().migrate(con);
+            DesktopInventoryService service = new DesktopInventoryService(con);
+
+            long produtoId = service.saveProduct(
+                    new DesktopInventoryService.ProductDraft(
+                            "Molho quebrado", null, "SKU4", "Mercearia", "un",
+                            new BigDecimal("4.50"), new BigDecimal("8.00"), new BigDecimal("10"),
+                            new BigDecimal("1"), "A1", null, ""
+                    ),
+                    1L,
+                    "P99996"
+            );
+
+            DesktopInventoryService.StockLossResult result = service.registerStockLoss(
+                    new DesktopInventoryService.StockLossRequest(
+                            produtoId, new BigDecimal("2"), "AVARIA_QUEBRA", "Vidro quebrado no estoque"
+                    ),
+                    1L
+            );
+
+            assertEquals("QUEBRA", result.movimentoTipo());
+            assertEquals(new BigDecimal("9.00"), result.valorPerda());
+
+            try (Statement st = con.createStatement()) {
+                var prod = st.executeQuery("select estoque_atual from produtos where id = " + produtoId);
+                assertTrue(prod.next());
+                assertEquals(8, prod.getBigDecimal("estoque_atual").intValue());
+
+                var mov = st.executeQuery("select tipo, quantidade, observacao from movimentacao_estoque where produto_id = " + produtoId);
+                assertTrue(mov.next());
+                assertEquals("QUEBRA", mov.getString("tipo"));
+                assertEquals(2, mov.getBigDecimal("quantidade").intValue());
+                assertTrue(mov.getString("observacao").contains("Avaria/quebra"));
+
+                var fin = st.executeQuery("select tipo, categoria, valor_total, valor_baixado, status, forma_baixa from financeiro_lancamentos where id = " + result.lancamentoFinanceiroId());
+                assertTrue(fin.next());
+                assertEquals("PAGAR", fin.getString("tipo"));
+                assertEquals("Perdas de estoque - Avaria/quebra", fin.getString("categoria"));
+                assertEquals(new BigDecimal("9"), fin.getBigDecimal("valor_total").stripTrailingZeros());
+                assertEquals(new BigDecimal("9"), fin.getBigDecimal("valor_baixado").stripTrailingZeros());
+                assertEquals("QUITADO", fin.getString("status"));
+                assertEquals("BAIXA_ESTOQUE", fin.getString("forma_baixa"));
+            }
+        }
+    }
 }

@@ -28,5 +28,5 @@ echo - Testes: OK
 echo - Build: OK
 echo - Pastas operacionais: OK
 echo.
-echo Proximo passo: abrir ABRIR_MERCADO_TONICO_DESKTOP.bat para validacao manual da interface.
+echo Proximo passo: abrir ABRIR_MERCADO_TUNICO_DESKTOP.bat para validacao manual da interface.
 pause

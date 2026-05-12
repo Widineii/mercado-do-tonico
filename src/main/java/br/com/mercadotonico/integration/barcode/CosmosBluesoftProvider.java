@@ -93,7 +93,7 @@ public final class CosmosBluesoftProvider implements BarcodeProvider {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                 .timeout(timeout)
                 .header("Accept", "application/json")
-                .header("User-Agent", "MercadoDoTonicoPDV/1.0")
+                .header("User-Agent", "MercadoDoTunicoPDV/1.0")
                 .header("X-Cosmos-Token", token)
                 .GET()
                 .build();

@@ -1,5 +1,7 @@
 package br.com.mercadotonico.desktop;
 
+import br.com.mercadotonico.core.FixedAdminAuthorizationPassword;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -61,13 +63,6 @@ public final class ClienteEditDialog extends JDialog {
      * Se ficar {@code null} (cliente nao encontrado) o save aborta antes.
      */
     private BigDecimal limiteOriginal = null;
-
-    /**
-     * Senha solicitada para alterar o limite de credito de um cliente.
-     * Mantida fixa intencionalmente como "admin123" - escolha do dono.
-     * Trocar aqui caso queira outra senha.
-     */
-    private static final String SENHA_ALTERAR_LIMITE = "admin123";
 
     public ClienteEditDialog(Window owner, Connection con, long clienteId, Runnable onSaved) {
         super(owner, "Editar cliente", ModalityType.APPLICATION_MODAL);
@@ -399,7 +394,7 @@ public final class ClienteEditDialog extends JDialog {
                         lblHistorico.setText("Nenhuma venda no convênio pendente.");
                     } else {
                         lblHistorico.setText(qtd + " venda" + (qtd == 1 ? "" : "s")
-                                + " em aberto. Para quitar, use \"Registrar pagamento de convênio\".");
+                                + " em aberto. Para quitar, use o botão Baixa na aba Convênio.");
                     }
                 }
             }
@@ -421,7 +416,8 @@ public final class ClienteEditDialog extends JDialog {
                 "<html>O <b>limite de credito</b> esta sendo alterado.<br>"
                 + "De: <b>R$ " + MONEY_FMT.format(antigo) + "</b>"
                 + "  &rarr;  Para: <b>R$ " + MONEY_FMT.format(novo) + "</b><br>"
-                + "<br>Digite a <b>senha do administrador</b> para confirmar.</html>");
+                + "<br>Digite a senha de <b>autorizacao</b> do estabelecimento ou a senha de login do "
+                + "<b>Admin</b> / <b>Gerente</b> para confirmar.</html>");
         info.setFont(new Font("Segoe UI", Font.PLAIN, 12));
 
         JPasswordField senha = new JPasswordField();
@@ -444,7 +440,7 @@ public final class ClienteEditDialog extends JDialog {
             return false;
         }
         String digitada = new String(senha.getPassword());
-        if (!SENHA_ALTERAR_LIMITE.equals(digitada)) {
+        if (!FixedAdminAuthorizationPassword.PLAINTEXT.equals(digitada)) {
             JOptionPane.showMessageDialog(this,
                     "Senha incorreta. A alteracao do limite NAO foi salva.",
                     "Senha invalida",
@@ -488,7 +484,7 @@ public final class ClienteEditDialog extends JDialog {
         // Se o operador mudou o valor de "Limite de credito (R$)", o sistema
         // pede uma senha antes de salvar - politica do dono pra evitar que
         // qualquer operador suba o limite de fiado de um cliente sem
-        // autorizacao. A senha e fixa: SENHA_ALTERAR_LIMITE.
+        // autorizacao. A senha fixa padrao e FixedAdminAuthorizationPassword.PLAINTEXT.
         if (limiteOriginal != null && limite.compareTo(limiteOriginal) != 0) {
             if (!solicitarSenhaParaAlterarLimite(limiteOriginal, limite)) {
                 lblStatus.setForeground(RED);

@@ -63,7 +63,7 @@
 - [ ] Arquivo `data/logs/app.log` existe.
 - [ ] Erros operacionais gravam usuario e stack trace.
 - [ ] Backup manual gera copia do banco.
-- [ ] Restore por `RESTORE_MERCADO_TONICO.bat` concluido com sucesso.
+- [ ] Restore por `RESTORE_MERCADO_TUNICO.bat` concluido com sucesso.
 
 ## Go-live
 

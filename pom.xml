@@ -4,10 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>br.com.mercadotonico</groupId>
-    <artifactId>mercado-do-tonico</artifactId>
+    <artifactId>mercado-do-tunico</artifactId>
     <version>1.0.0</version>
-    <name>Mercado do Tonico - Desktop</name>
-    <description>PDV / Gestao de mercado em Java Swing (sistema desktop puro).</description>
+    <name>Mercearia do Tunico - Desktop</name>
+    <description>PDV / Gestao de mercearia em Java Swing (sistema desktop puro).</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -98,7 +98,8 @@
                 <version>3.2.5</version>
             </plugin>
 
-            <!-- Permite rodar o desktop direto via `mvnw exec:java`.
+            <!-- Permite rodar o desktop direto via `mvnw compile exec:java`.
+                 (So `exec:java` nao compila; use `compile` antes ou o .bat do projeto.)
                  Por padrao abre o DesktopApp; pode trocar com
                  `-Dexec.mainClass=br.com.mercadotonico.tools.XYZ`. -->
             <plugin>

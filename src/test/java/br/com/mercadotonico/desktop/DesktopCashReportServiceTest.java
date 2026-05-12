@@ -42,4 +42,29 @@ class DesktopCashReportServiceTest {
             assertEquals(BigDecimal.ZERO.setScale(0), summary.get("divergencia"));
         }
     }
+
+    @Test
+    void sessionSummaryUsesOpeningNotCalendarDay() throws Exception {
+        try (Connection con = DriverManager.getConnection("jdbc:sqlite::memory:")) {
+            new MigrationRunner().migrate(con);
+            try (Statement st = con.createStatement()) {
+                st.executeUpdate("insert into usuarios (id, nome, login, senha_hash, role, ativo, desconto_maximo, autoriza_preco_zero) "
+                        + "values (10, 'Caixa', 'cx', 'x', 'CAIXA', 1, 5, 0)");
+                st.executeUpdate("update caixas set abertura_valor = 100, abertura_timestamp = '2026-05-06T22:00:00', "
+                        + "status = 'ABERTO', operador_atual_id = 10 where id = 1");
+                st.executeUpdate("insert into vendas (id, caixa_id, operador_id, total, desconto, forma_pagamento, timestamp, status) "
+                        + "values (200, 1, 10, 40, 0, 'DINHEIRO', '2026-05-07T01:00:00', 'CONCLUIDA')");
+                st.executeUpdate("insert into venda_pagamentos (venda_id, forma, valor) values (200, 'DINHEIRO', 40)");
+            }
+            DesktopCashReportService report = new DesktopCashReportService(con);
+            Map<String, BigDecimal> turno = report.sessionSummarySinceOpening(1L);
+            assertEquals(new BigDecimal("100"), turno.get("abertura"));
+            assertEquals(new BigDecimal("40"), turno.get("dinheiro"));
+            assertEquals(new BigDecimal("140"), turno.get("esperado_dinheiro"));
+
+            Map<String, BigDecimal> dia7 = report.dailySummary(1L, LocalDate.of(2026, 5, 7));
+            assertEquals(BigDecimal.ZERO, dia7.get("abertura"));
+            assertEquals(new BigDecimal("40"), dia7.get("dinheiro"));
+        }
+    }
 }

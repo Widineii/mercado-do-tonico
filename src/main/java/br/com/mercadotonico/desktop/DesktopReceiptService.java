@@ -31,6 +31,7 @@ import java.util.Locale;
 import java.util.Map;
 
 public class DesktopReceiptService {
+    private static final String STORE_NAME = "Mercearia do Tunico";
     private static final NumberFormat BRL = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-BR"));
     private static final DateTimeFormatter FILE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final DateTimeFormatter BR_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -89,7 +90,7 @@ public class DesktopReceiptService {
         try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
             final int W = 44;
             writer.write(repeat('=', W) + "\n");
-            writer.write(center("MERCADO DO TONICO", W) + "\n");
+            writer.write(center(STORE_NAME.toUpperCase(Locale.ROOT), W) + "\n");
             writer.write(center("Cupom nao fiscal / comprovante", W) + "\n");
             writer.write(repeat('=', W) + "\n");
             String linha1 = "Venda #" + venda.get("id") + "  " + LocalDateTime.parse(venda.get("timestamp").toString()).format(BR_DATE_TIME);
@@ -134,7 +135,7 @@ public class DesktopReceiptService {
         Document document = new Document();
         PdfWriter.getInstance(document, new FileOutputStream(file));
         document.open();
-        Paragraph title = new Paragraph("Mercado do Tonico", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15));
+        Paragraph title = new Paragraph(STORE_NAME, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15));
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
         Paragraph sub = new Paragraph("Cupom nao fiscal — comprovante de venda", FontFactory.getFont(FontFactory.HELVETICA, 9));

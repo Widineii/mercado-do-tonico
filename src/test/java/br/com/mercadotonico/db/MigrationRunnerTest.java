@@ -21,14 +21,17 @@ class MigrationRunnerTest {
             try (Statement st = con.createStatement()) {
                 ResultSet rs = st.executeQuery("select count(*) from schema_migrations");
                 assertTrue(rs.next());
-                assertEquals(12, rs.getInt(1));
+                assertEquals(16, rs.getInt(1));
 
                 ResultSet nfCols = st.executeQuery("pragma table_info(notas_fiscais)");
                 boolean hasChave = false;
+                boolean hasStatus = false;
                 while (nfCols.next()) {
                     if ("chave_acesso".equalsIgnoreCase(nfCols.getString("name"))) hasChave = true;
+                    if ("status".equalsIgnoreCase(nfCols.getString("name"))) hasStatus = true;
                 }
                 assertTrue(hasChave, "V011 deve criar coluna chave_acesso");
+                assertTrue(hasStatus, "V013 deve criar coluna status em notas_fiscais");
 
                 ResultSet clienteCols = st.executeQuery("pragma table_info(clientes)");
                 boolean hasFiadoDe = false;

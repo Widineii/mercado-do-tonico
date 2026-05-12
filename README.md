@@ -1,6 +1,6 @@
-# Mercado do Tonico
+# Mercearia do Tunico
 
-Sistema desktop de gestao para pequeno supermercado, feito em Java Swing com banco SQLite local.
+Sistema desktop de gestao para mercearia, feito em Java Swing com banco SQLite local.
 
 ## O que esta implementado
 
@@ -30,7 +30,7 @@ Sistema desktop de gestao para pequeno supermercado, feito em Java Swing com ban
 De dois cliques no arquivo:
 
 ```text
-ABRIR_MERCADO_TONICO_DESKTOP.bat
+ABRIR_MERCADO_TUNICO_DESKTOP.bat
 ```
 
 Para operacao em rede com 2 caixas:
@@ -46,7 +46,7 @@ Ou rode pelo terminal:
 
 ```powershell
 .\mvnw.cmd -q -DskipTests package
-java --enable-native-access=ALL-UNNAMED -jar target\mercado-do-tonico-1.0.0.jar
+java --enable-native-access=ALL-UNNAMED -jar target\mercado-do-tunico-1.0.0.jar
 ```
 
 No primeiro login dos usuarios padrao, o sistema exige troca de senha.
@@ -70,8 +70,10 @@ http://localhost:8080
 O banco SQLite sera criado automaticamente em:
 
 ```text
-data/mercado-tonico.db
+data/mercado-tunico.db
 ```
+
+Se voce ja usava uma instalacao antiga com `data/mercado-tonico.db` e nao criou o arquivo novo, o aplicativo continua abrindo o banco legado automaticamente.
 
 ## Acessos iniciais
 
@@ -150,5 +152,5 @@ VALIDAR_SISTEMA.bat
 2. Logar com `admin`, `gerente`, `caixa1` e `estoque1` para validar permissoes.
 3. Realizar uma venda simples e uma venda com pagamento combinado.
 4. Importar um XML real de NF-e e conferir atualizacao de estoque.
-5. Executar `BACKUP_MERCADO_TONICO.bat`.
-6. Executar `RESTORE_MERCADO_TONICO.bat` e validar reabertura.
+5. Executar `BACKUP_MERCADO_TUNICO.bat`.
+6. Executar `RESTORE_MERCADO_TUNICO.bat` e validar reabertura.

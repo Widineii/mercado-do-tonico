@@ -29,7 +29,11 @@ public class MigrationRunner {
             "db/migration/V009__force_password_change.sql",
             "db/migration/V010__product_barcode_lookup.sql",
             "db/migration/V011__nota_fiscal_chave_acesso.sql",
-            "db/migration/V012__cliente_convenio_fiado_de.sql"
+            "db/migration/V012__cliente_convenio_fiado_de.sql",
+            "db/migration/V013__notas_fiscais_status_pendente_baixa.sql",
+            "db/migration/V014__fornecedores_dados_completos.sql",
+            "db/migration/V015__fornecedores_endereco_tipo_ativo.sql",
+            "db/migration/V016__financeiro_nota_fiscal.sql"
     );
 
     public void migrate(Connection connection) throws Exception {
@@ -44,6 +48,57 @@ public class MigrationRunner {
         repairLegacyForeignKeyReferences(connection);
         scrubLegacyFkFixSuffixesGlobally(connection);
         dropOrphanLegacyFkObjects(connection);
+        repairUsuariosOldReferencesInSqliteMaster(connection);
+    }
+
+    /**
+     * A migracao V008 renomeia {@code usuarios} para {@code usuarios_old} com
+     * {@code PRAGMA foreign_keys = OFF}. Ao dropar {@code usuarios_old}, o SQLite pode
+     * deixar DDLs em {@code sqlite_master} ainda referenciando {@code usuarios_old},
+     * quebrando INSERTs com FK (ex.: {@code financeiro_lancamentos.criado_por}).
+     * Substitui o identificador remanescente por {@code usuarios} em todo o texto da DDL.
+     */
+    void repairUsuariosOldReferencesInSqliteMaster(Connection connection) throws Exception {
+        int polluted;
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery("""
+                     select count(*) from sqlite_master
+                     where instr(coalesce(sql, ''), 'usuarios_old') > 0
+                     """)) {
+            polluted = rs.next() ? rs.getInt(1) : 0;
+        }
+        if (polluted == 0) {
+            return;
+        }
+        SupportLogger.log("WARN", "migration", "Corrigindo DDLs que ainda referenciam usuarios_old", "linhas=" + polluted);
+        boolean autoCommit = connection.getAutoCommit();
+        try (Statement st = connection.createStatement()) {
+            st.execute("pragma writable_schema = ON");
+            connection.setAutoCommit(true);
+            try {
+                st.executeUpdate("""
+                        update sqlite_master
+                           set sql = replace(coalesce(sql, ''), 'usuarios_old', 'usuarios')
+                         where instr(coalesce(sql, ''), 'usuarios_old') > 0
+                        """);
+            } finally {
+                st.execute("pragma writable_schema = OFF");
+            }
+            st.execute("vacuum");
+        } catch (Exception e) {
+            SupportLogger.log("ERROR", "migration", "Falha ao corrigir referencias a usuarios_old", e.getMessage());
+            throw e;
+        } finally {
+            connection.setAutoCommit(autoCommit);
+        }
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery("""
+                     select count(*) from sqlite_master
+                     where instr(coalesce(sql, ''), 'usuarios_old') > 0
+                     """)) {
+            int remaining = rs.next() ? rs.getInt(1) : 0;
+            SupportLogger.log("INFO", "migration", "Pos-correcao usuarios_old", "remanescente=" + remaining);
+        }
     }
 
     /**

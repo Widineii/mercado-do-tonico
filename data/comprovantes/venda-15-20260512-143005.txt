@@ -1,0 +1,21 @@
+============================================
+             MERCADO DO TUNICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #15  12/05/2026 14:30
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Achocolatado Nescau Lata 20.      1    R$ 8,99      R$ 8,99
+--------------------------------------------
+Subtotal produtos                         R$ 8,99
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                             R$ 8,99
+--------------------------------------------
+Pagamentos:
+  DEBITO        R$ 8,99
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

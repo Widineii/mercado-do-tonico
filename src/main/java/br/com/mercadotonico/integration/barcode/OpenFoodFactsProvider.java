@@ -53,10 +53,12 @@ public final class OpenFoodFactsProvider implements BarcodeProvider {
     public static final String NAME = "OPEN_FOOD_FACTS";
     private static final String ENDPOINT =
             "https://world.openfoodfacts.org/api/v2/product/%s.json"
-                    + "?fields=code,product_name,product_name_pt,brands,categories,"
-                    + "quantity,image_url,image_front_url,manufacturing_places";
+                    + "?fields=code,product_name,product_name_pt,product_name_en,product_name_es,"
+                    + "generic_name,abbreviated_product_name,"
+                    + "brands,categories,quantity,image_url,image_front_url,image_front_small_url,"
+                    + "manufacturing_places";
     /** User-Agent recomendado pela OFF para identificar o cliente. */
-    private static final String USER_AGENT = "MercadoDoTonicoPDV/1.0 (desktop)";
+    private static final String USER_AGENT = "MercadoDoTunicoPDV/1.0 (desktop)";
 
     private final HttpClient http;
     private final ObjectMapper mapper;
@@ -118,38 +120,84 @@ public final class OpenFoodFactsProvider implements BarcodeProvider {
 
         try {
             JsonNode root = mapper.readTree(resp.body());
-            int statusFlag = root.path("status").asInt(0);
-            if (statusFlag != 1 || !root.has("product")) {
-                SupportLogger.log("INFO", "barcode", "OpenFoodFacts: nao encontrado", barcode);
-                return Optional.empty();
-            }
-            JsonNode product = root.get("product");
-            String name = firstNonBlank(
-                    text(product, "product_name_pt"),
-                    text(product, "product_name"));
-            String brands = text(product, "brands");
-            String categories = text(product, "categories");
-            String quantity = text(product, "quantity");
-            String imageUrl = firstNonBlank(
-                    text(product, "image_front_url"),
-                    text(product, "image_url"));
-            String manufacturer = text(product, "manufacturing_places");
-
-            return Optional.of(BarcodeLookupResult.builder()
-                    .barcode(barcode.trim())
-                    .name(combineNameAndQuantity(name, quantity))
-                    .brand(firstBrand(brands))
-                    .manufacturer(manufacturer)
-                    .category(firstCategory(categories))
-                    .unit(unitFromQuantity(quantity))
-                    .imageUrl(imageUrl)
-                    .source(BarcodeLookupResult.Source.OPEN_FOOD_FACTS)
-                    .rawJson(resp.body())
-                    .build());
+            return parseOpenFoodFactsRoot(barcode.trim(), root, resp.body())
+                    .or(() -> {
+                        SupportLogger.log("INFO", "barcode", "OpenFoodFacts: nao encontrado", barcode);
+                        return Optional.empty();
+                    });
         } catch (Exception e) {
             throw new BarcodeLookupException("Resposta invalida de " + NAME,
                     NAME, e, false, false, false, false, status);
         }
+    }
+
+    /**
+     * Interpreta o JSON da API v2 ou o mesmo payload gravado em {@code produto_lookup_cache}
+     * (deve ser o corpo completo da resposta HTTP).
+     */
+    public static Optional<BarcodeLookupResult> parseJsonPayload(String requestedBarcode, String jsonBody) {
+        if (jsonBody == null || jsonBody.isBlank() || requestedBarcode == null) {
+            return Optional.empty();
+        }
+        try {
+            ObjectMapper om = new ObjectMapper();
+            JsonNode root = om.readTree(jsonBody);
+            return parseOpenFoodFactsRoot(requestedBarcode.trim(), root, jsonBody);
+        } catch (Exception e) {
+            SupportLogger.log("WARN", "barcode", "OpenFoodFacts: parse cache/local falhou",
+                    String.valueOf(e.getMessage()));
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<BarcodeLookupResult> parseOpenFoodFactsRoot(String requestedBarcode,
+                                                                        JsonNode root, String rawJson) {
+        int statusFlag = root.path("status").asInt(0);
+        if (statusFlag != 1 || !root.has("product")) {
+            return Optional.empty();
+        }
+        JsonNode product = root.get("product");
+        String code = firstNonBlank(
+                blankToNull(requestedBarcode),
+                text(root, "code"),
+                text(product, "code"));
+        if (code == null) {
+            code = requestedBarcode.trim();
+        }
+        String name = firstNonBlank(
+                text(product, "product_name_pt"),
+                text(product, "product_name"),
+                text(product, "product_name_en"),
+                text(product, "product_name_es"),
+                text(product, "generic_name"),
+                text(product, "abbreviated_product_name"));
+        String brands = text(product, "brands");
+        String categories = text(product, "categories");
+        String quantity = text(product, "quantity");
+        String imageUrl = firstNonBlank(
+                text(product, "image_front_url"),
+                text(product, "image_url"),
+                text(product, "image_front_small_url"));
+        String manufacturer = text(product, "manufacturing_places");
+
+        return Optional.of(BarcodeLookupResult.builder()
+                .barcode(code.trim())
+                .name(combineNameAndQuantity(name, quantity))
+                .brand(firstBrand(brands))
+                .manufacturer(manufacturer)
+                .category(firstCategory(categories))
+                .unit(unitFromQuantity(quantity))
+                .imageUrl(imageUrl)
+                .source(BarcodeLookupResult.Source.OPEN_FOOD_FACTS)
+                .rawJson(rawJson)
+                .build());
+    }
+
+    private static String blankToNull(String s) {
+        if (s == null || s.isBlank()) {
+            return null;
+        }
+        return s.trim();
     }
 
     // ---------------------- helpers de parsing ----------------------
@@ -162,9 +210,15 @@ public final class OpenFoodFactsProvider implements BarcodeProvider {
         return s.isEmpty() ? null : s;
     }
 
-    private static String firstNonBlank(String a, String b) {
-        if (a != null && !a.isBlank()) return a;
-        if (b != null && !b.isBlank()) return b;
+    private static String firstNonBlank(String... parts) {
+        if (parts == null) {
+            return null;
+        }
+        for (String s : parts) {
+            if (s != null && !s.isBlank()) {
+                return s;
+            }
+        }
         return null;
     }
 

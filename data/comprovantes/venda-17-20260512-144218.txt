@@ -1,0 +1,23 @@
+============================================
+             MERCADO DO TUNICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #17  12/05/2026 14:37
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Achocolatado Nescau Lata 20.      7    R$ 8,99     R$ 62,93
+Café Melitta Tradicional Vá.     21   R$ 33,99    R$ 713,79
+Acucar cristal pacote 1kg        30    R$ 8,95    R$ 268,50
+--------------------------------------------
+Subtotal produtos                     R$ 1.045,22
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                         R$ 1.045,22
+--------------------------------------------
+Pagamentos:
+  FIADO         R$ 1.045,22
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

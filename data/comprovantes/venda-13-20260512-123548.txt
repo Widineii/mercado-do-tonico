@@ -1,0 +1,21 @@
+============================================
+             MERCADO DO TUNICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #13  12/05/2026 12:35
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Achocolatado Nescau Lata 40.      1   R$ 13,99     R$ 13,99
+--------------------------------------------
+Subtotal produtos                        R$ 13,99
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                            R$ 13,99
+--------------------------------------------
+Pagamentos:
+  PIX           R$ 13,99
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

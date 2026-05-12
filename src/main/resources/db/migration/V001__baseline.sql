@@ -177,7 +177,7 @@ INSERT OR IGNORE INTO categorias (nome) VALUES
 ('Mercearia'), ('Bebidas'), ('Limpeza'), ('Hortifruti'), ('Frios'), ('Padaria');
 
 INSERT OR IGNORE INTO fornecedores (id, razao_social, nome_fantasia, cnpj, telefone, email, endereco, contato)
-VALUES (1, 'Distribuidora Tonico Alimentos LTDA', 'Tonico Distribuidora', '11222333000181', '(11) 4002-8922', 'compras@tonico.local', 'Rua do Comercio, 100', 'Marcia');
+VALUES (1, 'Distribuidora Tunico Alimentos LTDA', 'Tunico Distribuidora', '11222333000181', '(11) 4002-8922', 'compras@tunico.local', 'Rua do Comercio, 100', 'Marcia');
 
 INSERT OR IGNORE INTO produtos (nome, codigo_barras, sku, categoria, unidade, preco_custo, preco_venda, estoque_atual, estoque_minimo, localizacao, validade, fornecedor_id, ativo) VALUES
 ('Arroz Tipo 1 5kg', '7891000000011', 'ARR-5KG', 'Mercearia', 'un', 22.90, 31.90, 24, 8, 'Corredor 1', '2026-12-31', 1, 1),

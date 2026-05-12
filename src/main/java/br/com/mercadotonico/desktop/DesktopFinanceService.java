@@ -38,10 +38,11 @@ public class DesktopFinanceService {
 
         return insert("""
                 insert into financeiro_lancamentos
-                (tipo, descricao, parceiro, categoria, valor_total, valor_baixado, vencimento, status, observacao, criado_por, criado_em)
-                values (?, ?, ?, ?, ?, 0, ?, 'ABERTO', ?, ?, ?)
+                (tipo, descricao, parceiro, categoria, valor_total, valor_baixado, vencimento, status, observacao, criado_por, criado_em, nota_fiscal_id)
+                values (?, ?, ?, ?, ?, 0, ?, 'ABERTO', ?, ?, ?, ?)
                 """, tipo, request.descricao(), blankToNull(request.parceiro()), blankToNull(request.categoria()),
-                scaled(request.valorTotal()), request.vencimento(), blankToNull(request.observacao()), operatorId, now());
+                scaled(request.valorTotal()), request.vencimento(), blankToNull(request.observacao()), operatorId, now(),
+                request.notaFiscalId());
     }
 
     public void settle(long lancamentoId, BigDecimal valor, String formaBaixa, String observacao) throws Exception {
@@ -220,6 +221,19 @@ public class DesktopFinanceService {
             String categoria,
             BigDecimal valorTotal,
             String vencimento,
-            String observacao
-    ) {}
+            String observacao,
+            Long notaFiscalId
+    ) {
+        public FinanceEntryRequest(
+                String tipo,
+                String descricao,
+                String parceiro,
+                String categoria,
+                BigDecimal valorTotal,
+                String vencimento,
+                String observacao
+        ) {
+            this(tipo, descricao, parceiro, categoria, valorTotal, vencimento, observacao, null);
+        }
+    }
 }

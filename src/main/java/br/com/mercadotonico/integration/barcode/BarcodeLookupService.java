@@ -125,7 +125,9 @@ public final class BarcodeLookupService {
                 if (!c.isExpired(cacheTtl, negativeCacheTtl)) {
                     if (c.found && c.payload != null) {
                         SupportLogger.log("INFO", "barcode", "Encontrado em cache", barcode + " :: " + c.source);
-                        return new Outcome(Optional.of(c.payload.toBuilder()
+                        BarcodeLookupResult fromCache = c.payload;
+                        BarcodeLookupResult merged = enrichWithNonOffProviders(barcode, fromCache, warnings);
+                        return new Outcome(Optional.of(merged.toBuilder()
                                 .source(BarcodeLookupResult.Source.CACHE)
                                 .build()),
                                 Optional.empty(),
@@ -150,7 +152,7 @@ public final class BarcodeLookupService {
             try {
                 Optional<BarcodeLookupResult> r = provider.lookup(barcode);
                 if (r.isPresent()) {
-                    BarcodeLookupResult res = r.get();
+                    BarcodeLookupResult res = chainMergeAfterProvider(barcode, r.get(), provider.name(), warnings);
                     persistCache(barcode, res, true);
                     SupportLogger.log("INFO", "barcode", "Encontrado via " + provider.name(), barcode);
                     return new Outcome(Optional.of(res), Optional.empty(),
@@ -182,6 +184,26 @@ public final class BarcodeLookupService {
                 BarcodeLookupResult.Source.MANUAL, warnings);
     }
 
+    /**
+     * Resolve produto local pelo GTIN: {@code codigo_barras}, {@code sku} ou {@code codigo_interno}.
+     */
+    public Optional<Long> findRegisteredProductId(String rawBarcode) {
+        String barcode = sanitize(rawBarcode);
+        if (barcode.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            Map<String, Object> row = findExistingProduct(barcode);
+            if (row == null) {
+                return Optional.empty();
+            }
+            return Optional.of(((Number) row.get("id")).longValue());
+        } catch (Exception e) {
+            SupportLogger.log("WARN", "barcode", "findRegisteredProductId", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
     /** Limpa todo o cache (uso administrativo). */
     public int clearCache() throws Exception {
         synchronized (con) {
@@ -201,8 +223,15 @@ public final class BarcodeLookupService {
                     "select id, codigo_barras, sku, nome, marca, fabricante, categoria, " +
                     "unidade, ncm, cest, preco_custo, preco_venda, estoque_atual, " +
                     "estoque_minimo, localizacao, validade, imagem_url, observacoes " +
-                    "from produtos where codigo_barras = ? and ativo = 1 limit 1")) {
+                    "from produtos where ativo = 1 and ( " +
+                    "  codigo_barras = ? " +
+                    "  or trim(coalesce(sku, '')) = ? " +
+                    "  or trim(coalesce(codigo_interno, '')) = ? " +
+                    ") order by case when codigo_barras = ? then 0 else 1 end limit 1")) {
                 ps.setString(1, barcode);
+                ps.setString(2, barcode);
+                ps.setString(3, barcode);
+                ps.setString(4, barcode);
                 try (ResultSet rs = ps.executeQuery()) {
                     if (!rs.next()) return null;
                     Map<String, Object> m = new LinkedHashMap<>();
@@ -230,8 +259,9 @@ public final class BarcodeLookupService {
     }
 
     private BarcodeLookupResult mapProductRowToResult(Map<String, Object> row) {
+        String ean = firstNonBlank(asString(row.get("codigo_barras")), asString(row.get("sku")));
         return BarcodeLookupResult.builder()
-                .barcode(asString(row.get("codigo_barras")))
+                .barcode(ean)
                 .name(asString(row.get("nome")))
                 .brand(asString(row.get("marca")))
                 .manufacturer(asString(row.get("fabricante")))
@@ -303,7 +333,6 @@ public final class BarcodeLookupService {
         // Reaproveita o parser do provider correspondente quando possivel; fallback minimo.
         try {
             if (BarcodeLookupResult.Source.OPEN_FOOD_FACTS.dbValue().equalsIgnoreCase(source)) {
-                // OFF: usa um parser simples reproduzindo o que o provider faria.
                 return parseOffCache(barcode, json);
             }
             if (BarcodeLookupResult.Source.COSMOS_BLUESOFT.dbValue().equalsIgnoreCase(source)) {
@@ -315,32 +344,8 @@ public final class BarcodeLookupService {
         return null;
     }
 
-    private BarcodeLookupResult parseOffCache(String barcode, String json) throws Exception {
-        com.fasterxml.jackson.databind.JsonNode root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
-        com.fasterxml.jackson.databind.JsonNode product = root.path("product");
-        String name = txt(product.path("product_name_pt"));
-        if (name == null) name = txt(product.path("product_name"));
-        String quantity = txt(product.path("quantity"));
-        if (name != null && quantity != null
-                && !name.toLowerCase().contains(quantity.toLowerCase())) {
-            name = name + " " + quantity;
-        }
-        String brand = txt(product.path("brands"));
-        if (brand != null) {
-            int comma = brand.indexOf(',');
-            if (comma >= 0) brand = brand.substring(0, comma).trim();
-        }
-        String image = txt(product.path("image_front_url"));
-        if (image == null) image = txt(product.path("image_url"));
-        return BarcodeLookupResult.builder()
-                .barcode(barcode)
-                .name(name)
-                .brand(brand)
-                .imageUrl(image)
-                .unit(unitFromQuantity(quantity))
-                .source(BarcodeLookupResult.Source.OPEN_FOOD_FACTS)
-                .rawJson(json)
-                .build();
+    private BarcodeLookupResult parseOffCache(String barcode, String json) {
+        return OpenFoodFactsProvider.parseJsonPayload(barcode, json).orElse(null);
     }
 
     private BarcodeLookupResult parseCosmosCache(String barcode, String json) throws Exception {
@@ -353,25 +358,152 @@ public final class BarcodeLookupService {
                 .cest(txt(root.path("cest").path("code")))
                 .category(txt(root.path("gpc").path("description")))
                 .imageUrl(txt(root.path("thumbnail")))
+                .averagePrice(readAvgPriceNode(root.path("avg_price")))
                 .source(BarcodeLookupResult.Source.COSMOS_BLUESOFT)
                 .rawJson(json)
                 .build();
     }
 
-    private static String unitFromQuantity(String q) {
-        if (q == null) return "un";
-        String s = q.toLowerCase().replaceAll("[0-9.,\\s]", "");
-        return switch (s) {
-            case "kg" -> "kg";
-            case "g"  -> "g";
-            case "l"  -> "L";
-            case "ml" -> "ml";
-            default   -> "un";
-        };
+    private static BigDecimal readAvgPriceNode(com.fasterxml.jackson.databind.JsonNode node) {
+        if (node == null || node.isNull() || node.isMissingNode()) {
+            return null;
+        }
+        try {
+            if (node.isNumber()) {
+                return new BigDecimal(node.asText());
+            }
+            String t = node.asText("").trim().replace(',', '.');
+            if (t.isEmpty()) {
+                return null;
+            }
+            return new BigDecimal(t);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Cosmos (e outros apos OFF) trazem NCM/CEST/preco; OFF traz nome/imagem/categoria alimentar. */
+    private BarcodeLookupResult enrichWithNonOffProviders(String barcode, BarcodeLookupResult base,
+                                                          List<String> warnings) {
+        BarcodeLookupResult acc = base;
+        for (BarcodeProvider p : providers) {
+            if (!p.isAvailable() || OpenFoodFactsProvider.NAME.equals(p.name())) {
+                continue;
+            }
+            if (!needsSecondaryMerge(acc)) {
+                break;
+            }
+            try {
+                Optional<BarcodeLookupResult> o = p.lookup(barcode);
+                if (o.isPresent()) {
+                    acc = mergeOverlay(acc, o.get());
+                }
+            } catch (BarcodeLookupException ex) {
+                appendProviderWarning(warnings, ex);
+            } catch (Exception ex) {
+                warnings.add(p.name() + ": " + ex.getMessage());
+            }
+        }
+        return acc;
+    }
+
+    private BarcodeLookupResult chainMergeAfterProvider(String barcode, BarcodeLookupResult first,
+                                                        String firstProviderName, List<String> warnings) {
+        BarcodeLookupResult acc = first;
+        boolean pastFirst = false;
+        for (BarcodeProvider p : providers) {
+            if (!pastFirst) {
+                if (p.name().equals(firstProviderName)) {
+                    pastFirst = true;
+                }
+                continue;
+            }
+            if (!p.isAvailable()) {
+                continue;
+            }
+            if (!needsSecondaryMerge(acc)) {
+                break;
+            }
+            try {
+                Optional<BarcodeLookupResult> o = p.lookup(barcode);
+                if (o.isPresent()) {
+                    acc = mergeOverlay(acc, o.get());
+                }
+            } catch (BarcodeLookupException ex) {
+                appendProviderWarning(warnings, ex);
+            } catch (Exception ex) {
+                warnings.add(p.name() + ": " + ex.getMessage());
+            }
+        }
+        return acc;
+    }
+
+    private static boolean needsSecondaryMerge(BarcodeLookupResult a) {
+        if (a == null) {
+            return false;
+        }
+        return (a.ncm() == null || a.ncm().isBlank())
+                || (a.cest() == null || a.cest().isBlank())
+                || a.averagePrice() == null
+                || (a.category() == null || a.category().isBlank());
+    }
+
+    private static BarcodeLookupResult mergeOverlay(BarcodeLookupResult base, BarcodeLookupResult ext) {
+        return base.toBuilder()
+                .ncm(coalesceStr(base.ncm(), ext.ncm()))
+                .cest(coalesceStr(base.cest(), ext.cest()))
+                .averagePrice(base.averagePrice() != null ? base.averagePrice() : ext.averagePrice())
+                .category(coalesceStr(base.category(), ext.category()))
+                .manufacturer(coalesceStr(base.manufacturer(), ext.manufacturer()))
+                .imageUrl(coalesceStr(base.imageUrl(), ext.imageUrl()))
+                .brand(coalesceStr(base.brand(), ext.brand()))
+                .name(preferRicherProductName(base.name(), ext.name()))
+                .build();
+    }
+
+    /** Prefere descricao mais completa (ex.: Cosmos) quando o nome local e curto ou vazio. */
+    private static String preferRicherProductName(String baseName, String extName) {
+        if (extName == null || extName.isBlank()) {
+            return baseName;
+        }
+        if (baseName == null || baseName.isBlank()) {
+            return extName;
+        }
+        if (extName.length() > baseName.length() + 6) {
+            return extName;
+        }
+        return baseName;
+    }
+
+    private static String coalesceStr(String a, String b) {
+        if (a != null && !a.isBlank()) {
+            return a;
+        }
+        if (b != null && !b.isBlank()) {
+            return b;
+        }
+        return a;
+    }
+
+    private static void appendProviderWarning(List<String> warnings, BarcodeLookupException ex) {
+        String msg = ex.getMessage();
+        if (ex.isOffline()) {
+            warnings.add("Sem internet (" + ex.provider() + ")");
+        } else if (ex.isTimeout()) {
+            warnings.add("Tempo esgotado (" + ex.provider() + ")");
+        } else if (ex.isUnauthorized()) {
+            warnings.add("Chave invalida (" + ex.provider() + ")");
+        } else if (ex.isRateLimited()) {
+            warnings.add("Limite excedido (" + ex.provider() + ")");
+        } else {
+            warnings.add(msg == null ? "Erro em " + ex.provider() : msg);
+        }
     }
 
     private static String txt(com.fasterxml.jackson.databind.JsonNode node) {
-        if (node == null || node.isNull() || node.isMissingNode()) return null;
+        if (node == null || node.isNull() || node.isMissingNode()) {
+            return null;
+        }
         String s = node.asText("").trim();
         return s.isEmpty() ? null : s;
     }
@@ -420,4 +552,14 @@ public final class BarcodeLookupService {
     }
 
     private static String asString(Object v) { return v == null ? null : v.toString(); }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.isBlank()) {
+            return a;
+        }
+        if (b != null && !b.isBlank()) {
+            return b;
+        }
+        return a;
+    }
 }

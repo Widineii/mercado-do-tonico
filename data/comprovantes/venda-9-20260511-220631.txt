@@ -1,0 +1,21 @@
+============================================
+             MERCADO DO TUNICO
+       Cupom nao fiscal / comprovante
+============================================
+Venda #9  11/05/2026 22:06
+Caixa 1  |  Gerente Tonico
+--------------------------------------------
+PRODUTO                              QTD    UNITARIO     TOTAL
+--------------------------------------------
+Arroz Parboilizado Tipo 1 C.      2   R$ 31,90     R$ 63,80
+--------------------------------------------
+Subtotal produtos                        R$ 63,80
+Desconto                                  R$ 0,00
+TOTAL A PAGAR                            R$ 63,80
+--------------------------------------------
+Pagamentos:
+  FIADO         R$ 63,80
+--------------------------------------------
+        Documento sem valor fiscal.
+         Obrigado pela preferencia!
+============================================

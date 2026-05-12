@@ -6,11 +6,11 @@ if not exist "config" mkdir config
 
 if not exist "config\desktop.properties" (
   (
-    echo # Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\mercado-tonico.db
+    echo # Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\mercado-tunico.db
     echo mercado.db.url=
   ) > "config\desktop.properties"
   echo Configure o arquivo config\desktop.properties com o caminho de rede do banco.
-  echo Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\mercado-tonico.db
+  echo Exemplo: mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\mercado-tunico.db
   pause
   exit /b 1
 )
@@ -22,9 +22,9 @@ if "%MERCADO_DB_URL%"=="" (
   exit /b 1
 )
 
-if not exist "target\mercado-do-tonico-1.0.0.jar" (
+if not exist "target\mercado-do-tunico-1.0.0.jar" (
   call mvnw.cmd -q -DskipTests package
 )
 
-java --enable-native-access=ALL-UNNAMED -jar target\mercado-do-tonico-1.0.0.jar
+java --enable-native-access=ALL-UNNAMED -jar target\mercado-do-tunico-1.0.0.jar
 pause

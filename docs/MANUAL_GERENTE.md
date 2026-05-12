@@ -30,7 +30,7 @@
 
 ## Backup
 
-- Executar `BACKUP_MERCADO_TONICO.bat`.
+- Executar `BACKUP_MERCADO_TUNICO.bat`.
 - Confirmar a geracao do arquivo de backup.
 
 ## Homologacao

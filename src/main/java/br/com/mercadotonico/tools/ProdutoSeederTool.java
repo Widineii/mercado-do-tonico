@@ -47,15 +47,27 @@ import java.util.List;
  */
 public final class ProdutoSeederTool {
 
-    private static final String DEFAULT_DB_URL = "jdbc:sqlite:data/mercado-tonico.db";
     private static final String DEFAULT_CSV    = "data/seed/produtos.csv";
     private static final String BACKUPS_DIR    = "backups";
     private static final DateTimeFormatter STAMP =
             DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
+    private static String defaultLocalSqliteJdbcUrl() {
+        Path novo = Path.of("data/mercado-tunico.db");
+        Path legado = Path.of("data/mercado-tonico.db");
+        try {
+            if (Files.exists(novo) || !Files.exists(legado)) {
+                return "jdbc:sqlite:data/mercado-tunico.db";
+            }
+        } catch (Exception ignored) {
+            // cai no legado
+        }
+        return "jdbc:sqlite:data/mercado-tonico.db";
+    }
+
     public static void main(String[] args) throws Exception {
         String csvArg = args.length > 0 ? args[0] : DEFAULT_CSV;
-        String dbUrlArg = System.getenv().getOrDefault("MERCADO_DB_URL", DEFAULT_DB_URL);
+        String dbUrlArg = System.getenv().getOrDefault("MERCADO_DB_URL", defaultLocalSqliteJdbcUrl());
 
         Path csvPath = Path.of(csvArg);
         if (!Files.isRegularFile(csvPath)) {
@@ -64,7 +76,7 @@ public final class ProdutoSeederTool {
         }
 
         System.out.println("==============================================");
-        System.out.println(" Mercado do Tonico - Seed de Produtos");
+        System.out.println(" Mercearia do Tunico - Seed de Produtos");
         System.out.println("==============================================");
         System.out.println(" CSV : " + csvPath.toAbsolutePath());
         System.out.println(" DB  : " + dbUrlArg);

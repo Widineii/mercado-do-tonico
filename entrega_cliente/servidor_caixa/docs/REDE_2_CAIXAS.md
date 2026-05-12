@@ -11,7 +11,7 @@
 1. Abra o sistema por `ABRIR_SERVIDOR_CAIXA.bat` para usar o banco local padrao.
 2. Compartilhe na rede a pasta `data` com permissao de leitura e gravacao.
 3. Anote o caminho de rede, exemplo:
-   - `\\SERVIDOR\mercado\data\mercado-tonico.db`
+   - `\\SERVIDOR\mercado\data\mercado-tunico.db`
 
 ## 2) Preparar PC cliente (PC 2)
 
@@ -20,7 +20,7 @@
 3. Preencha:
 
 ```properties
-mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\data\mercado-tonico.db
+mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\data\mercado-tunico.db
 ```
 
 4. Abra por `ABRIR_CAIXA_CLIENTE.bat`.
@@ -29,7 +29,7 @@ mercado.db.url=jdbc:sqlite:\\\\SERVIDOR\mercado\data\mercado-tonico.db
 
 - Sempre abrir primeiro o servidor e depois o cliente.
 - Evitar desligar o servidor com os caixas abertos.
-- Fazer backup diario no servidor com `BACKUP_MERCADO_TONICO.bat`.
+- Fazer backup diario no servidor com `BACKUP_MERCADO_TUNICO.bat`.
 
 ## Observacao tecnica
 

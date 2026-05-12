@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class DesktopInventoryService {
@@ -22,6 +23,97 @@ public class DesktopInventoryService {
 
     public DesktopInventoryService(Connection con) {
         this.con = con;
+    }
+
+    /**
+     * Atualiza cadastro completo do produto (exceto estoque atual e codigo interno).
+     * Registra historico de preco quando custo ou venda mudam.
+     */
+    public void updateProduct(long produtoId, ProductUpdate u, long operatorId) throws Exception {
+        BusinessRules.requireNotBlank(u.nome(), "Nome do produto");
+        BusinessRules.requireNotBlank(u.unidade(), "Unidade");
+        BusinessRules.requireNonNegative(u.precoCusto(), "Preco de custo");
+        BusinessRules.requireNonNegative(u.precoVenda(), "Preco de venda");
+        BusinessRules.requireNonNegative(u.estoqueMinimo(), "Estoque minimo");
+
+        Map<String, Object> cur = one("""
+                select preco_custo, preco_venda, codigo_barras, sku
+                from produtos where id = ?
+                """, produtoId);
+        if (cur == null) {
+            throw new AppException("Produto nao encontrado.");
+        }
+        String barrasNorm = u.codigoBarras() == null ? "" : u.codigoBarras().trim();
+        if (!barrasNorm.isEmpty()) {
+            Map<String, Object> dup = one("select id from produtos where codigo_barras = ? and id <> ?", barrasNorm, produtoId);
+            if (dup != null) {
+                throw new AppException("Ja existe outro produto com este codigo de barras.");
+            }
+        }
+        String skuNorm = u.sku() == null ? "" : u.sku().trim();
+        if (!skuNorm.isEmpty()) {
+            Map<String, Object> dup = one("select id from produtos where sku = ? and id <> ?", skuNorm, produtoId);
+            if (dup != null) {
+                throw new AppException("Ja existe outro produto com este SKU.");
+            }
+        }
+
+        BigDecimal oldCusto = money(cur.get("preco_custo"));
+        BigDecimal oldVenda = money(cur.get("preco_venda"));
+
+        withTransaction(() -> {
+            update("""
+                    update produtos set
+                        nome = ?,
+                        codigo_barras = ?,
+                        sku = ?,
+                        categoria = ?,
+                        unidade = ?,
+                        marca = ?,
+                        fabricante = ?,
+                        preco_custo = ?,
+                        preco_venda = ?,
+                        estoque_minimo = ?,
+                        localizacao = ?,
+                        validade = ?,
+                        lote_padrao = ?,
+                        observacoes = ?,
+                        imagem_url = ?,
+                        ncm = ?,
+                        cest = ?,
+                        fornecedor_id = ?,
+                        ativo = ?,
+                        controla_lote = ?,
+                        permite_preco_zero = ?
+                    where id = ?
+                    """,
+                    u.nome(),
+                    blankToNull(u.codigoBarras()),
+                    blankToNull(u.sku()),
+                    blankToNull(u.categoria()),
+                    u.unidade(),
+                    blankToNull(u.marca()),
+                    blankToNull(u.fabricante()),
+                    u.precoCusto(),
+                    u.precoVenda(),
+                    u.estoqueMinimo(),
+                    blankToNull(u.localizacao()),
+                    blankToNull(u.validade()),
+                    blankToNull(u.lotePadrao()),
+                    blankToNull(u.observacoes()),
+                    blankToNull(u.imagemUrl()),
+                    blankToNull(u.ncm()),
+                    blankToNull(u.cest()),
+                    u.fornecedorId(),
+                    u.ativo() ? 1 : 0,
+                    u.controlaLote() ? 1 : 0,
+                    u.permitePrecoZero() ? 1 : 0,
+                    produtoId);
+            if (oldCusto.compareTo(u.precoCusto()) != 0 || oldVenda.compareTo(u.precoVenda()) != 0) {
+                recordPriceHistory(produtoId, oldCusto, u.precoCusto(), oldVenda, u.precoVenda(), operatorId, "Edicao cadastro de produto");
+            }
+            return null;
+        });
     }
 
     public long saveProduct(ProductDraft draft, long operatorId, String codigoInterno) throws Exception {
@@ -137,6 +229,77 @@ public class DesktopInventoryService {
                 """, produtoId, upperType, quantidade, operatorId, now(), motivo);
             return null;
         });
+    }
+
+    public StockLossResult registerStockLoss(StockLossRequest request, long operatorId) throws Exception {
+        BusinessRules.requirePositive(request.quantidade(), "Quantidade");
+        BusinessRules.requireNotBlank(request.categoria(), "Motivo da baixa");
+        BusinessRules.requireNotBlank(request.observacao(), "Observacao");
+
+        String categoria = request.categoria().trim().toUpperCase(Locale.ROOT);
+        String movimentoTipo = "AVARIA_QUEBRA".equals(categoria) ? "QUEBRA" : "PERDA";
+        return withTransaction(() -> {
+            Map<String, Object> produto = one("""
+                    select nome, estoque_atual, preco_custo
+                    from produtos
+                    where id = ?
+                    """, request.produtoId());
+            if (produto == null) {
+                throw new AppException("Produto nao encontrado.");
+            }
+
+            String produtoNome = produto.get("nome").toString();
+            BigDecimal estoqueAtual = money(produto.get("estoque_atual"));
+            BigDecimal custoUnitario = money(produto.get("preco_custo")).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal valorPerda = custoUnitario.multiply(request.quantidade()).setScale(2, RoundingMode.HALF_UP);
+
+            BusinessRules.ensureStockAvailable(estoqueAtual, request.quantidade(), produtoNome);
+            int changed = updateCount("""
+                    update produtos
+                    set estoque_atual = estoque_atual - ?
+                    where id = ? and estoque_atual >= ?
+                    """, request.quantidade(), request.produtoId(), request.quantidade());
+            if (changed == 0) {
+                throw new AppException("Nao foi possivel concluir a baixa de estoque.");
+            }
+
+            String obsEstoque = categoryLabel(categoria) + " | " + request.observacao();
+            insert("""
+                    insert into movimentacao_estoque (produto_id, tipo, quantidade, operador_id, timestamp, observacao)
+                    values (?, ?, ?, ?, ?, ?)
+                    """, request.produtoId(), movimentoTipo, request.quantidade(), operatorId, now(), obsEstoque);
+
+            long lancamentoId = insert("""
+                    insert into financeiro_lancamentos
+                    (tipo, descricao, parceiro, categoria, valor_total, valor_baixado, vencimento, status, forma_baixa, observacao, criado_por, criado_em, baixado_em)
+                    values ('PAGAR', ?, ?, ?, ?, ?, ?, 'QUITADO', 'BAIXA_ESTOQUE', ?, ?, ?, ?)
+                    """,
+                    "Perda de estoque - " + produtoNome,
+                    "Estoque",
+                    "Perdas de estoque - " + categoryLabel(categoria),
+                    valorPerda,
+                    valorPerda,
+                    LocalDate.now().toString(),
+                    "Produto #" + request.produtoId()
+                            + " | qtd " + request.quantidade()
+                            + " | custo unitario " + custoUnitario
+                            + " | " + request.observacao(),
+                    operatorId,
+                    now(),
+                    now());
+
+            return new StockLossResult(produtoNome, movimentoTipo, categoria, valorPerda, lancamentoId);
+        });
+    }
+
+    private String categoryLabel(String categoria) {
+        return switch (categoria) {
+            case "VENCIMENTO" -> "Vencimento";
+            case "AVARIA_QUEBRA" -> "Avaria/quebra";
+            case "USO_INTERNO" -> "Degustacao/uso interno";
+            case "FURTO" -> "Furto";
+            default -> categoria;
+        };
     }
 
     public BigDecimal weightedAverageCost(BigDecimal estoqueAtual, BigDecimal custoAtual, BigDecimal entrada, BigDecimal custoEntrada) {
@@ -301,6 +464,30 @@ public class DesktopInventoryService {
             String observacoes
     ) {}
 
+    public record ProductUpdate(
+            String nome,
+            String codigoBarras,
+            String sku,
+            String categoria,
+            String unidade,
+            String marca,
+            String fabricante,
+            BigDecimal precoCusto,
+            BigDecimal precoVenda,
+            BigDecimal estoqueMinimo,
+            String localizacao,
+            String validade,
+            String lotePadrao,
+            String observacoes,
+            String imagemUrl,
+            String ncm,
+            String cest,
+            Long fornecedorId,
+            boolean ativo,
+            boolean controlaLote,
+            boolean permitePrecoZero
+    ) {}
+
     public record StockEntryRequest(
             long produtoId,
             BigDecimal quantidade,
@@ -315,5 +502,20 @@ public class DesktopInventoryService {
             long produtoId,
             BigDecimal saldoContado,
             String motivo
+    ) {}
+
+    public record StockLossRequest(
+            long produtoId,
+            BigDecimal quantidade,
+            String categoria,
+            String observacao
+    ) {}
+
+    public record StockLossResult(
+            String produtoNome,
+            String movimentoTipo,
+            String categoria,
+            BigDecimal valorPerda,
+            long lancamentoFinanceiroId
     ) {}
 }

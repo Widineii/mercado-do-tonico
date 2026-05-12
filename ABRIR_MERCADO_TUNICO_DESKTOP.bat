@@ -1,8 +1,9 @@
 @echo off
 cd /d "%~dp0"
-REM Lancador do Mercado do Tonico (sistema desktop Swing).
+REM Lancador da Mercearia do Tunico (sistema desktop Swing).
 REM Compila se necessario e abre a janela do app.
-call mvnw.cmd -q -DskipTests exec:java
+REM exec:java sozinho nao compila o projeto; sem compile ocorre ClassNotFoundException no DesktopApp.
+call mvnw.cmd -q -DskipTests compile exec:java
 if errorlevel 1 (
   echo Falha ao iniciar o desktop.
   echo.
