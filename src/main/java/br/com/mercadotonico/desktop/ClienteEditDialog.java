@@ -1,7 +1,5 @@
 package br.com.mercadotonico.desktop;
 
-import br.com.mercadotonico.core.FixedAdminAuthorizationPassword;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -14,6 +12,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 import java.util.Objects;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
  * Dialogo modal para editar todos os dados de um cliente do Fiado.
@@ -40,6 +39,7 @@ public final class ClienteEditDialog extends JDialog {
 
     private static final DecimalFormat MONEY_FMT =
             new DecimalFormat("#,##0.00", DecimalFormatSymbols.getInstance(Locale.forLanguageTag("pt-BR")));
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     private final Connection con;
     private final long clienteId;
@@ -439,8 +439,7 @@ public final class ClienteEditDialog extends JDialog {
         if (opt != JOptionPane.OK_OPTION) {
             return false;
         }
-        String digitada = new String(senha.getPassword());
-        if (!FixedAdminAuthorizationPassword.PLAINTEXT.equals(digitada)) {
+        if (!adminOuGerenteSenhaConfere(senha.getPassword())) {
             JOptionPane.showMessageDialog(this,
                     "Senha incorreta. A alteracao do limite NAO foi salva.",
                     "Senha invalida",
@@ -448,6 +447,38 @@ public final class ClienteEditDialog extends JDialog {
             return false;
         }
         return true;
+    }
+
+    private boolean adminOuGerenteSenhaConfere(char[] senhaDigitada) {
+        if (senhaDigitada == null || senhaDigitada.length == 0) {
+            return false;
+        }
+        String plain = new String(senhaDigitada).trim();
+        java.util.Arrays.fill(senhaDigitada, '\0');
+        if (plain.isEmpty()) {
+            return false;
+        }
+        try (PreparedStatement ps = con.prepareStatement("""
+                select senha_hash
+                from usuarios
+                where role in ('ADMIN','GERENTE')
+                  and ativo = 1
+                  and senha_hash is not null
+                  and trim(senha_hash) <> ''
+                """);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                if (PASSWORD_ENCODER.matches(plain, rs.getString("senha_hash"))) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Nao foi possivel validar a senha: " + e.getMessage(),
+                    "Erro de validacao",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+        return false;
     }
 
     private void save() {
@@ -480,11 +511,11 @@ public final class ClienteEditDialog extends JDialog {
             return;
         }
 
-        // SENHA DE ADMINISTRADOR PARA ALTERAR O LIMITE.
+        // SENHA DE ADMINISTRADOR/GERENTE PARA ALTERAR O LIMITE.
         // Se o operador mudou o valor de "Limite de credito (R$)", o sistema
         // pede uma senha antes de salvar - politica do dono pra evitar que
         // qualquer operador suba o limite de fiado de um cliente sem
-        // autorizacao. A senha fixa padrao e FixedAdminAuthorizationPassword.PLAINTEXT.
+        // autorizacao. A validacao usa a senha real de login de ADMIN/GERENTE ativo.
         if (limiteOriginal != null && limite.compareTo(limiteOriginal) != 0) {
             if (!solicitarSenhaParaAlterarLimite(limiteOriginal, limite)) {
                 lblStatus.setForeground(RED);

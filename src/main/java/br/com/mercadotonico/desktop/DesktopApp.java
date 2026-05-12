@@ -2,7 +2,6 @@ package br.com.mercadotonico.desktop;
 
 import br.com.mercadotonico.core.AppException;
 import br.com.mercadotonico.core.BusinessRules;
-import br.com.mercadotonico.core.FixedAdminAuthorizationPassword;
 import br.com.mercadotonico.core.PaymentAllocationService;
 import br.com.mercadotonico.core.SupportLogger;
 import br.com.mercadotonico.core.UserPermissions;
@@ -92,8 +91,8 @@ public class DesktopApp {
     private static final Color TEXT_MUTED = new Color(0x61, 0x61, 0x61);
     private static final Color TEXT_ON_GREEN = new Color(0xF1, 0xF8, 0xE9);
     private static final String XML_INBOX_DIR = "data/xml_nfe_entrada";
-    private static final Path SQLITE_DB_FILE = Path.of("data/mercado-tunico.db");
-    private static final Path SQLITE_DB_FILE_LEGACY = Path.of("data/mercado-tonico.db");
+    private static final Path SQLITE_DB_FILE = Path.of("data/mercado-tonico.db");
+    private static final Path SQLITE_DB_FILE_LEGACY = Path.of("data/mercado-tunico.db");
     private static final String DB_URL_ENV = "MERCADO_DB_URL";
     private static final String DB_URL_CONFIG = "config/desktop.properties";
     /** Ultimo caixa selecionado no PDV (persiste ao fechar/reabrir o programa). */
@@ -344,7 +343,7 @@ public class DesktopApp {
                         } catch (Exception ignored) {
                             // Auditoria nao deve quebrar o fluxo de cadastro.
                         }
-                        refreshFrame();
+                        refreshEstoqueViews();
                     }
             );
             dialog.setVisible(true);
@@ -397,7 +396,7 @@ public class DesktopApp {
     }
 
     private boolean loginDialog() throws Exception {
-        JTextField login = new JTextField("admin");
+        JTextField login = new JTextField();
         JPasswordField senha = new JPasswordField();
         final char senhaEchoChar = senha.getEchoChar();
         senha.setEchoChar((char) 0);
@@ -703,7 +702,7 @@ public class DesktopApp {
             addNavTab("Financeiro", "\uD83D\uDCB2", tabWithAutoScroll(financeiroPanel()));
         }
         if (UserPermissions.canAccessReports(user.role)) {
-            addNavTab("Relatorios", "\uD83D\uDCCA", tabWithAutoScroll(relatoriosPanel()));
+            addNavTab("Relatórios", "\uD83D\uDCCA", tabWithAutoScroll(relatoriosPanel()));
         }
         // Sincroniza estilo do tab component com a aba selecionada.
         Runnable refreshHeaders = () -> {
@@ -990,7 +989,7 @@ public class DesktopApp {
         JMenu densidade = new JMenu("Densidade da interface");
         Consumer<String> setDensidade = modo -> {
             DESKTOP_PREFS.put(PREF_UI_DENSITY, modo);
-            refreshFrame();
+            refreshEstoqueViews();
         };
         JMenuItem dAuto = new JMenuItem("Automatica (recomendado)");
         dAuto.setToolTipText("Compacta em telas pequenas (ex.: 1366x768) e folga em telas grandes.");
@@ -1015,7 +1014,7 @@ public class DesktopApp {
 
     private JPanel dashboardPanel() {
         JPanel panel = page();
-        panel.add(title("Painel de operacao"));
+        panel.add(title("Painel de operação"));
         if (!UserPermissions.canAccessReports(user.role)) {
             panel.add(roleDashboard());
             return panel;
@@ -1576,7 +1575,7 @@ public class DesktopApp {
             finalizar.setPreferredSize(new Dimension(0, compactMode() ? 38 : 44));
             finalizar.setMaximumSize(new Dimension(Integer.MAX_VALUE, compactMode() ? 38 : 44));
         }
-        finalizar.setToolTipText("Registrar venda (F4). Grava a venda, baixa estoque e aparece no relatorio.");
+        finalizar.setToolTipText("Registrar venda (F4). Grava a venda, baixa estoque e aparece no relatório.");
 
         // Botao Cancelar Venda (vermelho) - sempre disponivel ao lado do Finalizar.
         JButton cancelarVendaBtn = styledButton("\u274C  Cancelar Venda", MARKET_RED);
@@ -1603,7 +1602,7 @@ public class DesktopApp {
 
         JPanel cardAdicionar = pdvCaixaSideCard();
         cardAdicionar.add(sectionTitlePdv("\uD83D\uDED2  Adicionar Item"));
-        JLabel lCodDesc = label("Codigo / Descricao");
+        JLabel lCodDesc = label("Código / Descrição");
         lCodDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
         cardAdicionar.add(lCodDesc);
         codigo.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -1632,7 +1631,7 @@ public class DesktopApp {
         // e somada automaticamente (mesmo produtoId) sem abrir janela.
         cardAdicionar.add(Box.createVerticalStrut(compactMode() ? 4 : 6));
         JButton pesquisarProduto = button("\uD83D\uDD0D  Pesquisar produto");
-        pesquisarProduto.setToolTipText("Abre uma janela com todos os produtos. Escolha um item: ele preenche Codigo / Descricao; ajuste Quantidade e clique Adicionar produto.");
+        pesquisarProduto.setToolTipText("Abre uma janela com todos os produtos. Escolha um item: ele preenche Código / Descrição; ajuste Quantidade e clique Adicionar produto.");
         pesquisarProduto.addActionListener(e -> abrirPesquisaProduto(codigo));
         pesquisarProduto.setAlignmentX(Component.LEFT_ALIGNMENT);
         pesquisarProduto.setMaximumSize(new Dimension(Integer.MAX_VALUE, pesquisarProduto.getPreferredSize().height));
@@ -2135,7 +2134,7 @@ public class DesktopApp {
                     fundo.setToolTipText(tt.toString());
                     fundo.setEditable(false);
                     fundo.setEnabled(false);
-                    abrir.setText("Cx aberto");
+                    abrir.setText("Caixa aberto");
                 } else {
                     fundo.setEditable(true);
                     fundo.setEnabled(true);
@@ -2410,7 +2409,7 @@ public class DesktopApp {
                 );
                 audit("SALVAR_PRODUTO", nome.getText());
                 appLog("INFO", "estoque", "Produto cadastrado", "produtoId=" + produtoId);
-                refreshFrame();
+                refreshEstoqueViews();
             } catch (Exception ex) { error(ex); }
         });
 
@@ -2444,7 +2443,7 @@ public class DesktopApp {
                         user.id
                 );
                 audit("ENTRADA_MANUAL", "Produto " + entradaProdutoId.getText());
-                refreshFrame();
+                refreshEstoqueViews();
             } catch (Exception ex) { error(ex); }
         });
 
@@ -2534,7 +2533,7 @@ public class DesktopApp {
         tg.gridwidth = 1;
         tg.insets = new Insets(0, 0, 0, 6);
         tg.gridx = 0;
-        tablesGrid.add(section("Historico de preco", table("""
+        tablesGrid.add(section("Histórico de preço", table("""
             select h.id as ID, h.produto_id as ProdutoID, p.nome as Produto, h.preco_custo_anterior as CustoAnterior,
                    h.preco_custo_novo as CustoNovo, h.preco_venda_anterior as VendaAnterior, h.preco_venda_novo as VendaNova,
                    h.timestamp as DataHora, h.motivo as Motivo
@@ -2811,6 +2810,11 @@ public class DesktopApp {
         }
     }
 
+    private void refreshEstoqueViews() {
+        refreshEstoqueProdutosTableFromDb();
+        SwingUtilities.invokeLater(this::refreshDashboardPainelWidgets);
+    }
+
     /**
      * Lista de produtos no estoque com colunas alinhadas ao cadastro no banco.
      */
@@ -2950,7 +2954,7 @@ public class DesktopApp {
         int r = 0;
         addCompactRow(tabBasico, r++, "Codigo interno", codigoInterno, 10, "Codigo barras", barras, 14);
         addCompactRow(tabBasico, r++, "SKU", sku, 10, "Unidade", unidade, 6);
-        addCompactRow(tabBasico, r++, "Descricao (nome)", nome, 36);
+        addCompactRow(tabBasico, r++, "Descrição (nome)", nome, 36);
         addCompactRow(tabBasico, r++, "Grupo (categoria)", categoria, 18, "Marca", marca, 14);
         addCompactRow(tabBasico, r++, "Fabricante", fabricante, 22, "Prateleira (local)", local, 14);
         addCompactRow(tabBasico, r++, "Validade AAAA-MM-DD", validade, 12, "Lote padrao", lotePadrao, 12);
@@ -3145,7 +3149,7 @@ public class DesktopApp {
                         user.id);
                 audit("PRODUTO_EDITADO", "ID " + produtoId + " | " + nome.getText().trim());
                 dialog.setVisible(false);
-                refreshFrame();
+                refreshEstoqueViews();
             } catch (Exception ex) {
                 error(ex);
             }
@@ -3269,7 +3273,7 @@ public class DesktopApp {
 
     private void montarCamposFornecedorNoFormulario(JPanel form, FornecedorCampos c) {
         Window parentWin = frame != null ? frame : SwingUtilities.getWindowAncestor(form);
-        addCompactRow(form, 0, "Razao social", c.razao, 24, "Fantasia", c.fantasia, 20);
+        addCompactRow(form, 0, "Razão social", c.razao, 24, "Fantasia", c.fantasia, 20);
 
         JPanel docLinha = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         docLinha.setOpaque(false);
@@ -3618,7 +3622,7 @@ public class DesktopApp {
         salvar.addActionListener(e -> {
             try {
                 requireInventoryAccess();
-                BusinessRules.requireNotBlank(campos.razao.getText(), "Razao social");
+                BusinessRules.requireNotBlank(campos.razao.getText(), "Razão social");
                 String cnpjVal = campos.cnpj.getText().trim();
                 String docTipo = Objects.toString(campos.tipoDocumento.getSelectedItem(), "CNPJ");
                 int ativoVal = campos.ativo.isSelected() ? 1 : 0;
@@ -3658,11 +3662,11 @@ public class DesktopApp {
                         nullIfBlank(campos.estado.getText()), nullIfBlank(campos.inscricaoEstadual.getText()),
                         nullIfBlank(campos.observacoes.getText()),
                         ativoVal);
-                refreshFrame();
+                refreshEstoqueViews();
             } catch (Exception ex) { error(ex); }
         });
         final String sqlFornecedoresGrid = """
-                select f.id as ID, f.razao_social as Razao, f.nome_fantasia as Fantasia,
+                select f.id as ID, f.razao_social as "Razão", f.nome_fantasia as Fantasia,
                        coalesce(f.documento_tipo, 'CNPJ') as Doc, f.cnpj as CPF_CNPJ,
                        coalesce(f.inscricao_estadual, '') as IE,
                        f.telefone as Telefone, coalesce(f.celular, '') as Celular, f.email as Email,
@@ -3764,7 +3768,7 @@ public class DesktopApp {
         gravar.addActionListener(e -> {
             try {
                 requireInventoryAccess();
-                BusinessRules.requireNotBlank(campos.razao.getText(), "Razao social");
+                BusinessRules.requireNotBlank(campos.razao.getText(), "Razão social");
                 String cnpjVal = campos.cnpj.getText().trim();
                 String docTipo = Objects.toString(campos.tipoDocumento.getSelectedItem(), "CNPJ");
                 int ativoVal = campos.ativo.isSelected() ? 1 : 0;
@@ -4548,7 +4552,7 @@ public class DesktopApp {
                         observacao.getText()
                 ), user.id);
                 audit("FINANCEIRO_CADASTRO", "Lancamento #" + id + " | " + tipo.getSelectedItem());
-                refreshFrame();
+                refreshEstoqueViews();
             } catch (Exception ex) { error(ex); }
         });
 
@@ -4591,7 +4595,7 @@ public class DesktopApp {
     private JPanel relatoriosPanel() {
         JPanel panel = page();
         panel.setBorder(BorderFactory.createEmptyBorder(compactMode() ? 4 : 6, compactMode() ? 6 : 8, compactMode() ? 6 : 10, compactMode() ? 6 : 8));
-        JLabel tituloRel = new JLabel("Relatorios gerenciais");
+        JLabel tituloRel = new JLabel("Relatórios gerenciais");
         tituloRel.setFont(new Font("Segoe UI", Font.BOLD, fontSize(compactMode() ? 17 : 20)));
         tituloRel.setForeground(new Color(20, 20, 20));
         tituloRel.setBorder(new EmptyBorder(0, 0, compactMode() ? 4 : 8, 0));
@@ -4636,9 +4640,9 @@ public class DesktopApp {
         }
         filtros.add(filtroCaixa);
         filtros.add(Box.createHorizontalStrut(compactMode() ? 6 : 10));
-        JButton btnAtualizarRel = button("Atualizar relatorio");
+        JButton btnAtualizarRel = button("Atualizar relatório");
         filtros.add(btnAtualizarRel);
-        JButton btnRelEstoque = button("Relatorio estoque");
+        JButton btnRelEstoque = button("Relatório estoque");
         btnRelEstoque.setToolTipText("Mostra tudo que alterou ou mediu o estoque na data selecionada.");
         filtros.add(btnRelEstoque);
         panel.add(filtros);
@@ -4712,7 +4716,7 @@ public class DesktopApp {
                         where date(d.criado_em)=date(?)
                         """ + (caixaFiltro == null ? "" : " and d.caixa_id=? ")
                         + " order by d.id desc";
-                linhaOperacional.add(section("Devolucoes do dia", table(sqlDev,
+                linhaOperacional.add(section("Devoluções do dia", table(sqlDev,
                         caixaFiltro == null ? new Object[]{dia.toString()} : new Object[]{dia.toString(), caixaFiltro}), true));
                 relatorioBody.add(linhaOperacional);
                 relatorioBody.add(Box.createVerticalStrut(compactMode() ? 6 : 8));
@@ -4724,7 +4728,7 @@ public class DesktopApp {
                         sum(vi.quantidade*(vi.preco_unitario-vi.custo_unitario)) as Lucro
                         from venda_itens vi join vendas v on v.id=vi.venda_id where v.status='CONCLUIDA' group by date(v.timestamp) order by Dia desc
                         """), true));
-                linhaHistorico.add(section("Validades proximas por lote", table("""
+                linhaHistorico.add(section("Validades próximas por lote", table("""
                         select p.nome as Produto, coalesce(e.lote,'-') as Lote, e.validade as Validade, e.quantidade as Quantidade, e.documento as Documento
                         from entradas_estoque e join produtos p on p.id = e.produto_id
                         where e.validade is not null and date(e.validade) <= date('now','+30 day')
@@ -4983,9 +4987,9 @@ public class DesktopApp {
                     """, dia.toString(), caixaFiltro);
         }
         kpis.add(metricCardRelatorio("Vendas do dia", moneyText(totVendas), MARKET_GREEN_2));
-        kpis.add(metricCardRelatorio("Ticket medio", moneyText(totTicket), MARKET_GREEN));
-        kpis.add(metricCardRelatorio("Cartao (deb/cred)", moneyText(totCard), MARKET_ORANGE));
-        kpis.add(metricCardRelatorio("Devolucoes do dia", moneyText(totDev), MARKET_RED));
+        kpis.add(metricCardRelatorio("Ticket médio", moneyText(totTicket), MARKET_GREEN));
+        kpis.add(metricCardRelatorio("Cartão (deb/cred)", moneyText(totCard), MARKET_ORANGE));
+        kpis.add(metricCardRelatorio("Devoluções do dia", moneyText(totDev), MARKET_RED));
         return kpis;
     }
 
@@ -5005,7 +5009,7 @@ public class DesktopApp {
                     user.id, fundoInicial, LocalDateTime.now().toString(), item.id);
             audit("ABERTURA_CAIXA", item.text);
             msg("Caixa aberto.");
-            refreshFrame();
+            refreshEstoqueViews();
         } catch (Exception ex) { error(ex); }
     }
 
@@ -5884,8 +5888,8 @@ public class DesktopApp {
     }
 
     /**
-     * Aceita a senha fixa {@link FixedAdminAuthorizationPassword} (igual ao fluxo de limite no cadastro de cliente)
-     * ou a senha de login (BCrypt) de qualquer usuario Admin ou Gerente ativo no banco.
+     * Autoriza operacoes sensiveis com a senha real de login de qualquer
+     * usuario ADMIN ou GERENTE ativo no banco.
      */
     private boolean adminSenhaConfere(char[] senhaDigitada) throws Exception {
         if (senhaDigitada == null || senhaDigitada.length == 0) {
@@ -5895,9 +5899,6 @@ public class DesktopApp {
         java.util.Arrays.fill(senhaDigitada, '\0');
         if (plain.isEmpty()) {
             return false;
-        }
-        if (FixedAdminAuthorizationPassword.PLAINTEXT.equals(plain)) {
-            return true;
         }
         for (Map<String, Object> row : rows(
                 "select senha_hash from usuarios where role in ('ADMIN','GERENTE') and ativo=1 and senha_hash is not null and trim(senha_hash)<>''")) {
@@ -6851,7 +6852,7 @@ public class DesktopApp {
                 );
                 audit("AJUSTE_ESTOQUE", "Produto " + produtoId + " | " + tipoSelecionado);
                 dialog.dispose();
-                refreshFrame();
+                refreshEstoqueViews();
             } catch (Exception ex) {
                 error(ex);
             }
@@ -8574,18 +8575,18 @@ public class DesktopApp {
     }
 
     /**
-     * Banco local padrao {@code data/mercado-tunico.db}. Se ainda existir apenas
-     * o arquivo antigo {@code mercado-tonico.db}, usa ele para nao perder dados.
+     * Banco local padrao {@code data/mercado-tonico.db}. Se ainda existir apenas
+     * o arquivo antigo {@code mercado-tunico.db}, usa ele para nao perder dados.
      */
     private static String defaultLocalSqliteJdbcUrl() {
         try {
             if (Files.exists(SQLITE_DB_FILE) || !Files.exists(SQLITE_DB_FILE_LEGACY)) {
-                return "jdbc:sqlite:data/mercado-tunico.db";
+                return "jdbc:sqlite:data/mercado-tonico.db";
             }
         } catch (Exception ignored) {
             // ignora e cai no legado
         }
-        return "jdbc:sqlite:data/mercado-tonico.db";
+        return "jdbc:sqlite:data/mercado-tunico.db";
     }
 
     private File persistXmlInInbox(File selectedFile) throws Exception {
@@ -11248,8 +11249,8 @@ public class DesktopApp {
     }
 
     /**
-     * No PDV, o dialogo de aumento de limite de convenio aceita a senha fixa
-     * {@link FixedAdminAuthorizationPassword#PLAINTEXT} (igual ao estoque e ao cadastro de cliente).
+     * No PDV, o dialogo de aumento de limite de convenio aceita a senha real
+     * de login de um usuario ADMIN ou GERENTE ativo.
      */
 
     /** Dias a partir da data da compra mais antiga em aberto para quitar o convênio; após isso bloqueia novas compras FIADO. */
@@ -11455,8 +11456,14 @@ public class DesktopApp {
                 novoLimite.requestFocusInWindow();
                 return;
             }
-            String digitada = new String(senha.getPassword());
-            if (!FixedAdminAuthorizationPassword.PLAINTEXT.equals(digitada)) {
+            boolean autorizado;
+            try {
+                autorizado = adminSenhaConfere(senha.getPassword());
+            } catch (Exception ex) {
+                status.setText("Erro ao validar senha: " + ex.getMessage());
+                return;
+            }
+            if (!autorizado) {
                 status.setText("Senha de administrador incorreta.");
                 senha.setText("");
                 senha.requestFocusInWindow();

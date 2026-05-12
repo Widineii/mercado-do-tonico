@@ -9,21 +9,21 @@ if not exist "backups" (
 )
 
 set "latest="
-for /f "delims=" %%F in ('dir /b /a-d /o-d "backups\mercado-tunico_*.db" 2^>nul') do (
-  set "latest=%%F"
-  goto :found
-)
 for /f "delims=" %%F in ('dir /b /a-d /o-d "backups\mercado-tonico_*.db" 2^>nul') do (
   set "latest=%%F"
   goto :found
 )
 
-echo Nenhum backup encontrado em backups\mercado-tunico_*.db nem mercado-tonico_*.db
+echo Nenhum backup encontrado em backups\mercado-tonico_*.db
 pause
 exit /b 1
 
 :found
 echo Backup mais recente: %latest%
+echo.
+echo IMPORTANTE: feche o sistema em todos os computadores antes de restaurar.
+echo Restaurar com o sistema aberto pode corromper ou sobrescrever dados em uso.
+echo.
 set /p confirm="Confirmar restore para data\mercado-tonico.db? (S/N): "
 if /I not "%confirm%"=="S" (
   echo Operacao cancelada.

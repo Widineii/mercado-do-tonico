@@ -17,8 +17,10 @@
 ### Gerente
 
 - login: `admin`
-- senha: `admin123`
-- PIN: `1234`
+- senha inicial: `admin123`
+- PIN inicial: `1234`
+
+Troque a senha inicial antes de usar na loja.
 
 ### Gerente alternativo
 

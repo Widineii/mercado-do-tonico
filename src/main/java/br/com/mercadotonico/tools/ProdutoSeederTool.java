@@ -53,16 +53,16 @@ public final class ProdutoSeederTool {
             DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
     private static String defaultLocalSqliteJdbcUrl() {
-        Path novo = Path.of("data/mercado-tunico.db");
-        Path legado = Path.of("data/mercado-tonico.db");
+        Path novo = Path.of("data/mercado-tonico.db");
+        Path legado = Path.of("data/mercado-tunico.db");
         try {
             if (Files.exists(novo) || !Files.exists(legado)) {
-                return "jdbc:sqlite:data/mercado-tunico.db";
+                return "jdbc:sqlite:data/mercado-tonico.db";
             }
         } catch (Exception ignored) {
             // cai no legado
         }
-        return "jdbc:sqlite:data/mercado-tonico.db";
+        return "jdbc:sqlite:data/mercado-tunico.db";
     }
 
     public static void main(String[] args) throws Exception {

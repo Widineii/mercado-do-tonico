@@ -1,8 +1,14 @@
 # Build artifacts
 /target/
+/SISTEMA_MERCEARIA_TUNICO/
+*.jar
+*.zip
 
 # Logs do app em execução (regeneráveis; podem ficar grandes)
 /data/logs/
+/data/comprovantes/
+/data/*.db
+/backups/
 
 # IDE/editor
 /.idea/
